@@ -1,4 +1,4 @@
-## Interface: 16001
+## Interface: 16001, 120100, 120105
 ## Title: Gold Tracker
 ## Notes: Records gold, items, professions, recipes, AH sales and fishing for the Forever Gold Tracker dashboard. Read-only: it never acts for you.
 ## Version: 0.1.0
