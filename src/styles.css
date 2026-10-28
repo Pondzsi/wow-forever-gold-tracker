@@ -34,6 +34,8 @@ nav.side {
   padding: 16px 10px;
 }
 nav.side h1 { font-size: 15px; margin: 0 8px 16px; color: var(--gold); }
+.version-select { display: flex; flex-direction: column; gap: 3px; margin: 0 8px 14px; }
+.version-select select { width: 100%; }
 nav.side a {
   display: block;
   padding: 7px 10px;
@@ -143,5 +145,7 @@ a.button:hover { background: #34466a; }
   .app { flex-direction: column; }
   nav.side { width: auto; display: flex; flex-wrap: wrap; gap: 2px; padding: 10px; }
   nav.side h1 { width: 100%; margin-bottom: 6px; }
+  .version-select { width: 100%; flex-direction: row; align-items: center; margin: 0 0 8px; }
+  .version-select select { width: auto; }
   main { padding: 16px; }
 }

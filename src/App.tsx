@@ -1,4 +1,5 @@
 import { useEffect, useState, type ComponentType } from 'react';
+import { GAME_VERSIONS, gameVersion, setGameVersion } from './db';
 import { Crafting } from './pages/Crafting';
 import { Goals } from './pages/Goals';
 import { Inventory } from './pages/Inventory';
@@ -78,6 +79,16 @@ export function App() {
     <div className="app">
       <nav className="side">
         <h1>Forever Gold</h1>
+        <label className="version-select" title="Each game version keeps its own data">
+          <span className="small muted">Game version</span>
+          <select value={gameVersion} onChange={(e) => setGameVersion(e.target.value)}>
+            {GAME_VERSIONS.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+        </label>
         {PAGES.map((p) => (
           <a key={p.path} href={`#/${p.path}`} className={p.path === path ? 'active' : ''}>
             {p.label}

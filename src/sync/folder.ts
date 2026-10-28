@@ -1,6 +1,6 @@
 // Reads GoldTracker.lua and Auctionator.lua from the WoW folder through the
 // browser's File System Access API (Chrome and Edge). Read-only.
-import { db } from '../db';
+import { db, gameVersion, sharedDb } from '../db';
 import { importAuctionator, type AuctionatorReport } from './importAuctionator';
 import { importGoldTracker, type ImportReport } from './importAddon';
 import { parseSavedVariables, parseSavedVariablesBytes, utf8Strings } from './luaParse';
@@ -33,7 +33,7 @@ export async function chooseWowFolder(): Promise<void> {
   const picker = (window as unknown as { showDirectoryPicker: (o: object) => Promise<DirHandle> }).showDirectoryPicker;
   // Opens in Documents, where setup.bat puts the ForeverGoldTracker folder.
   const dir = await picker({ id: 'wow-folder', mode: 'read', startIn: 'documents' });
-  await db.meta.put({ key: 'wowFolder', value: dir });
+  await sharedDb.meta.put({ key: 'wowFolder', value: dir });
   await db.meta.delete('filePaths');
 }
 
@@ -69,7 +69,7 @@ export async function fileStatus(name: 'GoldTracker.lua' | 'Auctionator.lua'): P
 }
 
 export async function getFolder(): Promise<DirHandle | undefined> {
-  return (await db.meta.get('wowFolder'))?.value as DirHandle | undefined;
+  return (await sharedDb.meta.get('wowFolder'))?.value as DirHandle | undefined;
 }
 
 /** 'granted' | 'prompt' | 'denied' | 'none' (no folder chosen yet). */
@@ -85,7 +85,10 @@ export async function requestFolderPermission(): Promise<boolean> {
   return !!dir && (await dir.requestPermission({ mode: 'read' })) === 'granted';
 }
 
-/** Finds .../WTF/Account/<ACCOUNT>/SavedVariables/<file>. Picks the newest if there are several. */
+/**
+ * Finds .../WTF/Account/<ACCOUNT>/SavedVariables/<file> inside the selected game
+ * version's folder (e.g. _forever_). Picks the newest if there are several.
+ */
 async function findFiles(root: DirHandle): Promise<Partial<Record<FileName, FileHandle>>> {
   const found: Partial<Record<FileName, { handle: FileHandle; modified: number }>> = {};
   const queue: { dir: DirHandle; depth: number; inSavedVars: boolean }[] = [{ dir: root, depth: 0, inSavedVars: false }];
@@ -98,6 +101,9 @@ async function findFiles(root: DirHandle): Promise<Partial<Record<FileName, File
           const name = entry.name as FileName;
           if (!found[name] || found[name]!.modified < modified) found[name] = { handle: entry, modified };
         }
+      } else if (/^_.+_$/.test(entry.name) && entry.name !== gameVersion) {
+        // Another game version's folder (_retail_, _forever_, ...): not the one this page shows.
+        continue;
       } else if (depth < 7 && !SKIP_DIRS.has(entry.name.toLowerCase())) {
         // Per-character SavedVariables folders are deeper; GoldTracker and Auctionator use the account-wide one.
         queue.push({ dir: entry, depth: depth + 1, inSavedVars: entry.name === 'SavedVariables' });

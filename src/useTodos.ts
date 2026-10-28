@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from './db';
+import { db, sharedDb } from './db';
 import { buildTodos, type Todo } from './todo';
 import { useItems, usePriceMap, useSettings } from './ui';
 
@@ -14,7 +14,7 @@ export function useTodos(): Todo[] {
       db.sessions.toArray(),
       db.goals.count(),
       db.meta.get('lastSync'),
-      db.meta.get('wowFolder'),
+      sharedDb.meta.get('wowFolder'),
     ]);
     return { inventory, recipes, sessions, goals, lastSync: (lastSync?.value as number) ?? null, folderConnected: !!folder };
   }, []);

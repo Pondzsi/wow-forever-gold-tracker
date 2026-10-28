@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useRef, useState } from 'react';
-import { db } from '../db';
+import { db, sharedDb } from '../db';
 import {
   chooseWowFolder,
   fileStatus,
@@ -39,7 +39,7 @@ export function Sync() {
   const todos = useTodos();
   const lastSync = useLiveQuery(async () => (await db.meta.get('lastSync'))?.value as number | undefined, []);
   const permission = useLiveQuery(() => folderPermission(), [lastSync]);
-  const folderName = useLiveQuery(async () => ((await db.meta.get('wowFolder'))?.value as { name?: string })?.name, [lastSync]);
+  const folderName = useLiveQuery(async () => ((await sharedDb.meta.get('wowFolder'))?.value as { name?: string })?.name, [lastSync]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [showSteps, setShowSteps] = useState(false);

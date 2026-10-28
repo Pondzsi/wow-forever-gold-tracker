@@ -1,5 +1,16 @@
 import { useRef, useState } from 'react';
-import { db, exportAll, importAll, type BackupFile, type Character } from '../db';
+import {
+  clearVersionData,
+  db,
+  exportAll,
+  GAME_VERSIONS,
+  gameVersion,
+  importAll,
+  type BackupFile,
+  type Character,
+} from '../db';
+
+const versionLabel = GAME_VERSIONS.find((v) => v.id === gameVersion)?.label ?? gameVersion;
 import { useCharacters, useSettings } from '../ui';
 
 export function SettingsPage() {
@@ -13,7 +24,7 @@ export function SettingsPage() {
     const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `forever-gold-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `forever-gold-backup${gameVersion.replace(/_/g, "-")}${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
     setMessage('Backup downloaded.');
@@ -151,6 +162,25 @@ export function SettingsPage() {
           />
         </div>
         {message && <p className="hint">{message}</p>}
+      </div>
+
+      <div className="card">
+        <h3>Clear {versionLabel} data</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Deletes everything for <b>{versionLabel}</b> on this browser: characters, gold history, prices, sessions,
+          recipes and goals. Other game versions, fee settings and the folder connection stay. The next sync re-imports
+          what the addon and Auctionator still have saved; manual entries are lost.
+        </p>
+        <button
+          className="danger"
+          onClick={async () => {
+            if (!confirm(`Delete all ${versionLabel} data in this browser? This can't be undone.`)) return;
+            await clearVersionData();
+            setMessage(`${versionLabel} data cleared.`);
+          }}
+        >
+          Clear {versionLabel} data
+        </button>
       </div>
     </>
   );

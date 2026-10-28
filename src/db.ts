@@ -210,8 +210,8 @@ export class GoldDB extends Dexie {
   meta!: Table<Meta, string>;
   syncLog!: Table<SyncLogRow, string>;
 
-  constructor() {
-    super('wow-forever-gold');
+  constructor(name: string) {
+    super(name);
     this.version(1).stores({
       characters: '++id, name',
       goldSnapshots: '++id, characterId, time',
@@ -238,7 +238,54 @@ export class GoldDB extends Dexie {
   }
 }
 
-export const db = new GoldDB();
+// ---- Game versions: each has its own database, so test data never mixes with real data.
+
+export const GAME_VERSIONS = [
+  { id: '_forever_', label: 'WoW: Forever' },
+  { id: '_retail_', label: 'Retail' },
+  { id: '_classic_era_', label: 'Classic Era' },
+  { id: '_classic_', label: 'Classic' },
+] as const;
+
+const VERSION_KEY = 'fgt-game-version';
+
+function readGameVersion(): string {
+  try {
+    const v = globalThis.localStorage?.getItem(VERSION_KEY);
+    if (v && GAME_VERSIONS.some((g) => g.id === v)) return v;
+  } catch {
+    // Storage blocked: use the default.
+  }
+  return '_forever_';
+}
+
+/** The game version this page shows. Changing it reloads the page. */
+export const gameVersion = readGameVersion();
+
+export function setGameVersion(version: string): void {
+  try {
+    localStorage.setItem(VERSION_KEY, version);
+  } catch {
+    // Without storage the choice can't be remembered.
+  }
+  location.reload();
+}
+
+// Forever keeps the original database name, so existing data stays where it is.
+const dbName = (v: string) => (v === '_forever_' ? 'wow-forever-gold' : `wow-forever-gold-${v.replace(/^_|_$/g, '')}`);
+
+export const db = new GoldDB(dbName(gameVersion));
+
+/** Holds settings shared by all versions (the WoW folder connection). */
+export const sharedDb = gameVersion === '_forever_' ? db : new GoldDB(dbName('_forever_'));
+
+/** Deletes this game version's data. Keeps fee settings and the folder connection. */
+export async function clearVersionData(): Promise<void> {
+  await db.transaction('rw', db.tables, async () => {
+    for (const name of TABLE_NAMES) if (name !== 'settings') await db.table(name).clear();
+    await db.meta.where('key').noneOf(['wowFolder']).delete();
+  });
+}
 
 export const TABLE_NAMES = [
   'characters',
