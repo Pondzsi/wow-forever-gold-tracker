@@ -47,6 +47,17 @@ describe('buildTodos', () => {
     expect(t.items).toEqual(['Heavy Leather ×10', 'Silk Cloth ×20']);
   });
 
+  it('leaves warbound items out', () => {
+    const warbound = new Map(items);
+    warbound.set(3, { ...items.get(3)!, bindType: 9 }); // warbound until equipped
+    const t = buildTodos({
+      ...base,
+      items: warbound,
+      inventory: [{ characterId: 1, location: 'bags', itemId: 3, count: 1, updated: 0 }],
+    });
+    expect(t.some((x) => x.title.includes('have no AH price'))).toBe(false);
+  });
+
   it('leaves soulbound items out', () => {
     const withBound = new Map(items);
     withBound.set(3, { ...items.get(3)!, bound: true });

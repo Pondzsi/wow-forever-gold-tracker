@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { isStale, vendorBeatsAH } from '../calc';
-import { db, getOrCreateItem, type InventoryLocation } from '../db';
+import { bindLabel, db, getOrCreateItem, type InventoryLocation } from '../db';
 import { CharacterSelect, charName, fmtAge, ItemField, Money, useCharacters, useItems, usePriceMap, useSettings } from '../ui';
 
 export function Inventory() {
@@ -117,8 +117,10 @@ export function Inventory() {
                   <tr key={g.itemId}>
                     <td>
                       {items.byId.get(g.itemId)?.name}{' '}
-                      {items.byId.get(g.itemId)?.bound && (
-                        <span className="badge" title="Soulbound: can't be sold on the AH">bound</span>
+                      {bindLabel(items.byId.get(g.itemId)) && (
+                        <span className="badge" title="Can't be sold on the AH">
+                          {bindLabel(items.byId.get(g.itemId))}
+                        </span>
                       )}{' '}
                       {items.byId.get(g.itemId) && vendorBeatsAH(items.byId.get(g.itemId)!, p, settings) && (
                         <span className="badge Vendor">Vendor it</span>

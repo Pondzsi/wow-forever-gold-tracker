@@ -54,10 +54,13 @@ local function noteItem(itemID, link)
   if not itemID or not db then return end
   local it = db.items[itemID] or {}
   if link and not it.n and not secret(link) then it.n = link:match("%[(.-)%]") end
-  if not it.n or it.v == nil then
-    local name, _, _, _, _, _, _, _, _, _, sell = try(GetItemInfoFn, itemID)
+  if not it.n or it.v == nil or it.bt == nil then
+    -- 14th value: bind type (0 none, 1 on pickup, 2 on equip, 3 on use, 4 quest,
+    -- 7/8 account/warbound, 9 warbound until equipped).
+    local name, _, _, _, _, _, _, _, _, _, sell, _, _, bindType = try(GetItemInfoFn, itemID)
     if name and not it.n then it.n = name end
     if sell ~= nil and not secret(sell) then it.v = sell end
+    if bindType ~= nil and not secret(bindType) then it.bt = bindType end
   end
   db.items[itemID] = it
 end

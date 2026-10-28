@@ -1,7 +1,7 @@
 // "What still needs you": things the addon and Auctionator cannot fill in,
 // ranked by how much they matter for gold decisions.
 import { evaluateRecipe, isStale, type PriceMap } from './calc';
-import type { InventoryRow, Item, Recipe, Session, Settings } from './db';
+import { canSellOnAH, type InventoryRow, type Item, type Recipe, type Session, type Settings } from './db';
 import { formatMoney } from './money';
 
 export type Value = 'High' | 'Medium' | 'Low';
@@ -72,8 +72,8 @@ export function buildTodos(input: TodoInput): Todo[] {
   const held = new Map<number, number>();
   for (const r of inventory) held.set(r.itemId, (held.get(r.itemId) ?? 0) + r.count);
   const unpriced = [...held.entries()]
-    // Soulbound items can't be listed, so they never need an AH price.
-    .filter(([id]) => !prices.get(id) && !items.get(id)?.bound && (items.get(id)?.vendorPrice ?? 0) > 0)
+    // Soulbound, quest and warbound items can't be listed, so they never need an AH price.
+    .filter(([id]) => !prices.get(id) && canSellOnAH(items.get(id)) && (items.get(id)?.vendorPrice ?? 0) > 0)
     .map(([id, count]) => ({ id, count, weight: count * (items.get(id)?.vendorPrice ?? 0) }))
     .sort((a, b) => b.weight - a.weight);
   if (unpriced.length) {
@@ -81,7 +81,7 @@ export function buildTodos(input: TodoInput): Todo[] {
     todos.push({
       value: big ? 'High' : 'Medium',
       title: `${unpriced.length} sellable item(s) in your bags or bank have no AH price`,
-      why: 'You can\'t tell whether to sell, vendor or keep them. Sorted by vendor value × count. Soulbound items are left out.',
+      why: 'You can\'t tell whether to sell, vendor or keep them. Sorted by vendor value × count. Soulbound, quest and warbound items are left out.',
       how: 'Search them in the AH with Auctionator. If nobody lists them, the AH has no price: vendor or keep them.',
       items: unpriced.slice(0, TOP).map((u) => `${name(u.id)} ×${u.count}`),
     });

@@ -82,10 +82,12 @@ export async function importGoldTracker(saved: Record<string, LuaValue>): Promis
       if (name && conflict) name = `${name} #${gameId}`;
       const vendor = num(info.v);
       const bound = typeof info.b === 'boolean' ? info.b : undefined;
+      const bindType = num(info.bt);
       if (known) {
         const patch: Record<string, unknown> = {};
         if (vendor !== undefined && known.vendorPrice !== vendor) patch.vendorPrice = vendor;
         if (bound !== undefined && known.bound !== bound) patch.bound = bound;
+        if (bindType !== undefined && known.bindType !== bindType) patch.bindType = bindType;
         // Fix placeholder names and names saved with markup by an earlier version.
         if (name && name !== known.name && (known.name.startsWith('item #') || known.name.includes('|'))) {
           patch.name = name;
@@ -103,12 +105,13 @@ export async function importGoldTracker(saved: Record<string, LuaValue>): Promis
           gameItemId: gameId,
           ...(vendor !== undefined ? { vendorPrice: vendor } : {}),
           ...(bound !== undefined ? { bound } : {}),
+          ...(bindType !== undefined ? { bindType } : {}),
         });
         named.gameItemId = gameId;
         byGameId.set(gameId, named);
         return named.id!;
       }
-      const item = { name: name ?? `item #${gameId}`, gameItemId: gameId, vendorPrice: vendor, bound };
+      const item = { name: name ?? `item #${gameId}`, gameItemId: gameId, vendorPrice: vendor, bound, bindType };
       const id = await db.items.add(item);
       byGameId.set(gameId, { ...item, id });
       byName.set(item.name.toLowerCase(), { ...item, id });

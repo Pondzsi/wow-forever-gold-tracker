@@ -47,6 +47,25 @@ export interface Item {
   vendorPrice?: number; // copper per unit, when known
   depositPerUnit?: number; // observed AH deposit in copper per unit (lost if it doesn't sell)
   bound?: boolean; // every copy you hold is soulbound: can't be sold on the AH
+  bindType?: number; // game bind type: 1 pickup, 2 equip, 3 use, 4 quest, 7/8/9 account (warbound)
+}
+
+/** Bind types that can never be listed on the AH: on pickup, quest, account/warbound. */
+const NO_AH_BIND_TYPES = new Set([1, 4, 7, 8, 9]);
+
+/** False when the game says this item can't be sold on the Auction House. */
+export function canSellOnAH(item: Item | undefined): boolean {
+  if (!item) return true;
+  if (item.bound) return false;
+  return item.bindType === undefined || !NO_AH_BIND_TYPES.has(item.bindType);
+}
+
+export function bindLabel(item: Item | undefined): string | null {
+  if (!item) return null;
+  if (item.bindType !== undefined && [7, 8, 9].includes(item.bindType)) return 'warbound';
+  if (item.bindType === 4) return 'quest';
+  if (item.bound || item.bindType === 1) return 'bound';
+  return null;
 }
 
 export type InventoryLocation = 'bags' | 'bank';
