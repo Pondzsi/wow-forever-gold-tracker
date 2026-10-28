@@ -24,7 +24,7 @@ const base = {
 describe('buildTodos', () => {
   it('asks to connect the folder first when not connected', () => {
     const t = buildTodos({ ...base, folderConnected: false });
-    expect(t[0]).toMatchObject({ value: 'High', title: 'Connect your WoW folder' });
+    expect(t[0]).toMatchObject({ value: 'High', title: 'Connect the game data folder' });
   });
 
   it('flags unverified AH fees until a sale is observed', () => {

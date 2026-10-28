@@ -118,7 +118,7 @@ export function Prices() {
           <input placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         {shownItems.length === 0 ? (
-          <EmptyState>No items yet. Prices come from Auctionator: run a full scan at the AH, then <code>/reload</code>. You can also record one by hand above.</EmptyState>
+          <EmptyState>No items yet. Items arrive with the Gold Tracker sync; Auctionator prices are added for those items. Run a full scan at the AH, then <code>/reload</code>. You can also record a price by hand above.</EmptyState>
         ) : (
           <div className="table-wrap"><table>
             <thead>

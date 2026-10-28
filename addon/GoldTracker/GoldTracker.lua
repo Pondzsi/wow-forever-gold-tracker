@@ -122,11 +122,13 @@ local function bagIds()
 end
 
 local function bankIds()
-  local ids = {}
+  local ids, seen = {}, {}
   if Enum and Enum.BagIndex then
     for k, v in pairs(Enum.BagIndex) do
       -- Character bank only. The shared account/warband bank is skipped.
-      if type(k) == "string" and k:find("Bank") and not k:find("Account") and not k:find("Warband") then
+      -- Two names can share one container id; read each container once so items are not counted twice.
+      if type(k) == "string" and k:find("Bank") and not k:find("Account") and not k:find("Warband") and not seen[v] then
+        seen[v] = true
         ids[#ids + 1] = v
       end
     end
@@ -394,8 +396,10 @@ local function stopSession(reason)
     -- Auto sessions end at the last catch, so idle time is not counted.
     s.stop, s.g1 = s.last, s.gLast
   else
-    s.stop, s.g1 = time(), money()
+    -- A session closed after a logout ends at the logout, not at the next login.
+    s.stop, s.g1 = s.pausedAt or time(), s.gPause or money()
   end
+  s.pausedAt, s.gPause = nil, nil
   s.fs1 = fishingSkill()
   s.reason = reason
   push({ k = "session", s = s })
@@ -673,8 +677,7 @@ function handlers.PLAYER_LOGIN()
   lastMoney = money()
   if lastMoney then push({ k = "gold", g = lastMoney }) end
   char.gold, char.goldT = lastMoney, time()
-  -- A session left open (crash or disconnect) is closed now.
-  if char.session then stopSession("closed after relog") end
+  -- A running session is decided in PLAYER_ENTERING_WORLD: kept after /reload, closed after a logout.
   C_Timer.After(5, function()
     snapshotBags()
     checkSkills()
@@ -687,9 +690,25 @@ function handlers.PLAYER_LOGIN()
   end)
 end
 
+-- PLAYER_LOGOUT also fires on /reload, so a session is only paused here.
+-- PLAYER_ENTERING_WORLD tells a reload (keep the session) from a new login (close it).
 function handlers.PLAYER_LOGOUT()
-  if char and char.session then stopSession("logout") end
+  local s = char and char.session
+  if s then s.pausedAt, s.gPause = time(), money() end
   if char then char.level = UnitLevel("player") end
+end
+
+function handlers.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
+  local s = char and char.session
+  if not s then return end
+  if isReloadingUi then
+    s.pausedAt, s.gPause = nil, nil
+    say(("%s session continues after the reload."):format(s.type))
+  elseif isInitialLogin then
+    -- Logged out (or crashed) with a session running: close it where it stopped.
+    if not s.pausedAt and not s.auto then s.pausedAt, s.gPause = s.last or s.start, s.gLast end
+    stopSession("closed after logout")
+  end
 end
 
 handlers.PLAYER_MONEY = onMoney
@@ -772,7 +791,8 @@ SlashCmdList.GOLDTRACKER = function(msg)
     say("Saving data for the dashboard...")
     ReloadUI()
   else
-    say("/gt start farming | /gt start fishing | /gt stop | /gt status | /gt check | /gt sync (reload to save data now)")
-    say("Fishing sessions start by themselves on your first catch.")
+    say("/gt start farming | /gt start fishing | /gt stop | /gt status")
+    say("/gt check (test which game data works, then /reload) | /gt sync (same as /reload: saves data now)")
+    say("Fishing sessions start by themselves on your first catch. A /reload keeps a running session; logging out ends it.")
   end
 end

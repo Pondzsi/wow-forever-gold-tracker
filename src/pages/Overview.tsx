@@ -70,8 +70,9 @@ export function Overview() {
         <div className="card">
           <h3>Welcome</h3>
           <p style={{ margin: 0 }}>
-            No characters yet. Follow the steps on <a href="#/sync">Sync &amp; to-do</a>: run setup.bat once, log in to
-            WoW, then type <code>/reload</code>. Your characters appear here by themselves.
+            No characters yet. Follow the steps on <a href="#/sync">Sync &amp; to-do</a>: run setup.bat once, choose the
+            <code>Documents\ForeverGoldTracker</code> folder, log in to WoW, then type <code>/reload</code>. Your
+            characters appear here by themselves.
           </p>
         </div>
       )}

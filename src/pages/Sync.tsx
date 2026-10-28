@@ -115,15 +115,15 @@ export function Sync() {
                 <Step n={1} done={atr.found} current={current === 1} title="Install Auctionator in WoW">
                   From CurseForge or Wago. It provides the Auction House prices.
                   {gt.hasData && !atr.found
-                    ? ' Auctionator.lua was not found yet: install it, log in once, then /gt sync.'
+                    ? ' Auctionator.lua was not found yet: install it, log in once, then /reload.'
                     : ' This turns green after step 4.'}
                 </Step>
                 <Step n={2} done={gt.found} current={current === 2} title="Download the setup and run setup.bat">
                   <a className="button" href="./ForeverGoldTracker-setup.zip" download>
                     Download setup
                   </a>{' '}
-                  Unzip it and double-click <b>setup.bat</b>. Press Enter to track <code>_forever_</code> (or pick
-                  another game version). It installs the addon and creates <code>Documents\ForeverGoldTracker</code>.
+                  Unzip it and double-click <b>setup.bat</b>. It installs the addon into every game version folder
+                  and starts a background copier that fills <code>Documents\ForeverGoldTracker</code>.
                 </Step>
                 <Step n={3} done={connected} current={current === 3} title="Connect the folder">
                   {permission === 'prompt' ? (
@@ -139,11 +139,11 @@ export function Sync() {
                   <b>Allow on every visit</b>.
                 </Step>
                 <Step n={4} done={gt.hasData} current={current === 4} title="Log in to WoW, then save">
-                  Play as usual. Type <code>/gt sync</code> in chat (or log out) to save. Switch back to this tab:
+                  Type <code>/reload</code> in chat (or log out) so WoW saves the addon data. Switch back to this tab:
                   your characters appear by themselves.
                 </Step>
                 <Step n={5} done={atr.hasData} current={current === 5} title="Scan the Auction House">
-                  At the AH, open the Auctionator tab and run a full scan. Then <code>/gt sync</code> again.
+                  At the AH, open the Auctionator tab and run a full scan. Then <code>/reload</code> again.
                 </Step>
               </ol>
               <div className="row">

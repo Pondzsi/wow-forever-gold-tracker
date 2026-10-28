@@ -35,7 +35,7 @@ export function SettingsPage() {
   async function restore(file: File) {
     try {
       const data = JSON.parse(await file.text()) as BackupFile;
-      if (!confirm(`Replace ALL current data with the backup from ${data.exportedAt}?`)) return;
+      if (!confirm(`Replace ALL current ${versionLabel} data with the backup from ${data.exportedAt}?`)) return;
       await importAll(data);
       setMessage('Backup restored.');
     } catch (e) {
@@ -113,7 +113,7 @@ export function SettingsPage() {
           </div>
         ) : (
           <p className="hint">
-            5% cut and a refunded deposit are the Classic rules, not verified for Forever. The addon reads the real
+            5% cut and a refunded deposit are the Classic and retail rules, not verified for Forever. The addon reads the real
             values from your first AH sale mail.
           </p>
         )}
@@ -148,7 +148,7 @@ export function SettingsPage() {
         <h3>Backup</h3>
         <p className="muted" style={{ marginTop: 0 }}>
           Your data is stored in this browser only. Clearing browser data deletes it. Download a backup regularly and keep
-          it in a synced folder (OneDrive, Google Drive…).
+          it in a synced folder (OneDrive, Google Drive…). A backup holds the <b>{versionLabel}</b> data only.
         </p>
         <div className="row">
           <button onClick={() => void download()}>Download backup (JSON)</button>

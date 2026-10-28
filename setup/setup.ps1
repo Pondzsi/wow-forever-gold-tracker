@@ -63,7 +63,7 @@ if ($flavors.Count -eq 0) { Fail "No game versions (like _forever_ or _retail_) 
 # All game versions are installed and copied; the website picks which one to show.
 Say ('Game versions: ' + ($flavors -join ', '))
 
-# --- 3. Install the addon ----------------------------------------------------
+# --- 2. Install the addon ----------------------------------------------------
 $addonSrc = Join-Path $here 'GoldTracker'
 if (-not (Test-Path $addonSrc)) { $addonSrc = Join-Path $here '..\addon\GoldTracker' }
 if (-not (Test-Path (Join-Path $addonSrc 'GoldTracker.toc'))) { Fail 'GoldTracker addon files are missing next to setup.bat.' }
@@ -88,7 +88,7 @@ foreach ($f in $flavors) {
   }
 }
 
-# --- 4. Install the background copier ---------------------------------------
+# --- 3. Install the background copier ---------------------------------------
 Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
   Where-Object { $_.CommandLine -like '*ForeverGoldTracker*copier.ps1*' } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
@@ -123,7 +123,7 @@ if (-not $NoStartup) {
   Say ''
   Say '=== Done ==='
   Say 'In the dashboard that opens now:'
-  Say '  Sync & to-do -> Choose WoW folder -> pick this folder:'
+  Say '  Sync & to-do -> Choose folder... -> pick this folder:'
   Say "  $Dest"
   Say 'Use Chrome or Edge, and allow access on every visit when asked.'
   Start-Process $DashboardUrl

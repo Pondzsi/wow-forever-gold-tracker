@@ -218,13 +218,13 @@
       }
 
       /* Decisions */
-      .decisions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .decisions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
       .decision {
         background: var(--panel-2);
         border: 1px solid var(--border);
         border-left: 3px solid var(--accent);
         border-radius: 4px;
-        padding: 11px 14px;
+        padding: 8px 13px;
       }
       .decision .q { display: block; font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
       .decision .a { color: var(--muted); font-size: 15px; line-height: 1.35; }
@@ -285,6 +285,14 @@
               <span class="q">When do I reach my goal?</span>
               <span class="a">The tool calculates a date from your gold income of the last 7 days. Example goal: epic mount.</span>
             </div>
+            <div class="decision">
+              <span class="q">What do I mail to my bank alt?</span>
+              <span class="a">The tool lists the items that each character sends to the bank alt. It also counts the mails and the postage.</span>
+            </div>
+            <div class="decision">
+              <span class="q">Does the addon work in this game version?</span>
+              <span class="a">The addon tests the game data after each login. The tool shows which data works.</span>
+            </div>
           </div>
         </section>
         <section class="panel" aria-labelledby="how">
@@ -324,7 +332,6 @@
           <section class="panel" aria-labelledby="next">
             <h2 id="next">Coming next</h2>
             <ul class="next">
-              <li><div>Addon health check <span>– shows which game data works in WoW: Forever.</span></div></li>
               <li><div>Daily backups <span>– saves your data to your Documents folder.</span></div></li>
               <li><div>Disenchant values <span>– adds disenchanting to the Sell list.</span></div></li>
               <li><div>Auction results <span>– shows which items sold and which expired.</span></div></li>

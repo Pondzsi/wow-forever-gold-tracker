@@ -1,7 +1,8 @@
 # WoW: Forever Gold Tracker — Version 1 Spec
 
-Status: draft for review. No code written yet.
-Date: 2026-10-28. Game launch: 2026-11-04.
+Status: design record. Written 2026-10-28 before any code; game launch 2026-11-04.
+Sections 1–12 are the original plan. Where the code now differs, a **Now:** note says so.
+Sections 9b–9e describe what was added later. The README has the current setup.
 
 ## 1. Goal
 
@@ -10,6 +11,9 @@ Track gold and profession profit for two characters with minimal manual work.
 - Characters: **Legally UnDead** (Rogue, Skinning + Leatherworking + Fishing) and **Legally Dead** (Mage, Tailoring + Enchanting + Fishing).
 - Same account, same realm (Horde, Normal).
 - All prices come from recorded data or manual input. No invented prices.
+
+**Now:** the dashboard works for any number of characters. Nothing is seeded: the addon sync creates
+the characters, or you add them in Settings.
 
 ## 2. Architecture
 
@@ -23,8 +27,10 @@ WoW client ──(logout or /reload)──> SavedVariables file (.lua)
                                    JSON export (backup)
 ```
 
-- **App:** Vite + React + TypeScript. Runs locally (`npm run dev` or a built static page).
-- **Storage:** IndexedDB through Dexie.
+- **App:** Vite + React + TypeScript. ~~Runs locally~~ **Now:** a static site on GitHub Pages
+  (https://pondzsi.github.io/wow-forever-gold-tracker/), deployed from `main`. `npm run dev` is for development only.
+- **Storage:** IndexedDB through Dexie. **Now:** one database per game version (`_forever_`, `_retail_`,
+  `_classic_era_`, `_classic_`), picked in the sidebar.
 - **Charts:** Recharts.
 - **Lua parsing:** a small custom parser. SavedVariables only uses simple Lua tables.
 - **Theme:** dark. No decorative work until the core features work.
@@ -135,21 +141,24 @@ Passive only. It observes and saves data. No automation of any kind.
 | Gold reason | Category comes from which window is open (merchant, mailbox, AH, trade, trainer). Otherwise `other`. |
 | Bags and bank | Snapshot of bags after changes settle. Bank snapshot when the bank opens. |
 | Professions | Skill levels from the profession API. The exact call depends on Forever's client and must be checked. |
-| Sessions | `/gt start fishing <zone>`, `/gt stop`. Bags and gold are saved at the start and stop. |
+| Sessions | `/gt start fishing <zone>`, `/gt stop`. Bags and gold are saved at the start and stop. **Now:** `/gt start farming` or `/gt start fishing` (no zone argument; the addon reads the zone). Gold is saved at start and stop; items come from the loot window, not from bag snapshots. Fishing sessions also start by themselves (§9b). |
 | Container opens | When loot comes from an opened item (trunk or fish), save its contents. Fallback: compare bags before and after. |
 
-**Data format:** an append-only event list. Each event has a unique id, so re-importing never creates duplicates. The list is trimmed once the dashboard has imported it (the addon keeps the last N events).
+**Data format:** an append-only event list. Each event has a unique id, so re-importing never creates duplicates. ~~The list is trimmed once the dashboard has imported it~~ **Now:** the addon does not know what the dashboard imported. Above 20,000 events it drops the oldest 1,000.
 
 **Rules:**
 
 - No combat-log use. It is blocked in Forever.
-- Nothing runs in combat.
+- Nothing runs in combat. **Now:** bag snapshots and recipe scans wait until combat ends. Gold and loot events are still recorded in combat; they only read data.
 - No hidden communication with outside programs.
 
 ## 8. Sync
 
 - Uses the File System Access API (Chrome/Edge).
 - The folder handle is stored in IndexedDB. The browser may ask for permission again once per session.
+- **Now:** browsers can't open folders inside Program Files. `setup.bat` installs a background copier that copies
+  both files from every game version to `Documents\ForeverGoldTracker\<version>\<account>\SavedVariables\`.
+  You choose that folder; the dashboard reads only the subfolder of the selected game version.
 - The file updates only at **logout, `/reload`, or game exit**.
 - Process: parse the file, keep only events not seen before, then update the tables.
 - Fallback: a normal file upload (Firefox, or if folder access fails).
@@ -157,6 +166,7 @@ Passive only. It observes and saves data. No automation of any kind.
 ## 9. Out of scope for version 1
 
 - Own AH scanner. Prices are entered by hand first. Importing from an existing AH addon comes later if one supports Forever.
+  **Now:** prices come from Auctionator (§9b). The Gold Tracker addon still does not scan the AH.
 - Disenchant predictions.
 - Loot from combat or chat.
 - PvP and dungeon tracking.
@@ -168,13 +178,15 @@ Goal: no manual forms where the game can supply the data.
 
 - **Auctionator is required.** AH prices come from `AUCTIONATOR_PRICE_DATABASE` in `Auctionator.lua`
   (per realm; per item `m` = latest min price, `h`/`l` = daily high/low, days since 2020-01-01).
+  Retail Auctionator stores each realm as one CBOR string; the dashboard decodes both formats.
   Only items the dashboard knows are imported. The Gold Tracker addon does not scan the AH.
   Format checked against Auctionator 9.x source; verify with a real Forever file at launch.
 - **Addon also records:** vendor prices (game data), AH sale mails (exact price, deposit and cut, which
   verify the fee settings), recipes from the profession window, and fishing sessions that start on the
   first catch and end after 15 minutes without one. Trunk/fish contents are read from the loot window.
 - **Sync:** the dashboard keeps read access to the WoW folder (Chrome/Edge) and imports both files
-  whenever its tab gets focus. `/gt sync` reloads the UI so WoW writes the files right away.
+  whenever its tab gets focus. `/gt sync` reloads the UI (same as `/reload`) so WoW writes the files right away.
+  A `/reload` keeps a running session (PLAYER_ENTERING_WORLD isReloadingUi); logout ends it at the logout time.
 - **Sync & to-do page:** lists what is still manual, ranked High / Medium / Low, plus a table of what is
   automatic.
 
@@ -212,6 +224,16 @@ Goal: tell the gathering character which items to mail to the bank alt, which st
 - After the items are mailed and synced, they are in the bank alt's inventory and leave the list.
 - Overview shows a tile with the stacks and value to send.
 
+## 9e. Distribution (2026-10-28)
+
+- The dashboard is hosted on GitHub Pages. `.github/workflows/pages.yml` runs the tests, builds the site
+  and packs `ForeverGoldTracker-setup.zip` (`setup/*` + `addon/GoldTracker`).
+- `setup.bat` (`setup/setup.ps1`) finds WoW, installs the addon into every game version folder, installs
+  the background copier (`setup/copier.ps1`, also at Windows start) and opens the site. There is no version
+  prompt. `uninstall.bat` removes the addon, the copier and its startup entry.
+- Addon 0.2.0 lists interfaces 16001, 120100 and 120105. Clients with another interface number still need
+  "Load out of date AddOns".
+
 ## 10. Milestones
 
 1. **M1 — Manual dashboard (before launch).**
@@ -236,6 +258,7 @@ Goal: tell the gathering character which items to mail to the bank alt, which st
 
 ## 12. Install and setup
 
-- Node.js LTS.
-- Chrome or Edge.
-- Addon folder copied into the game's `Interface\AddOns\` (exact path depends on Forever's install).
+~~Node.js LTS. Addon folder copied into the game's `Interface\AddOns\`.~~
+
+**Now:** Windows, Chrome or Edge, and Auctionator. `setup.bat` installs the addon (§9e). Node.js is only
+needed for development.

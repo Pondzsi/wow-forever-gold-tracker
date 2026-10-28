@@ -43,16 +43,16 @@ export function buildTodos(input: TodoInput): Todo[] {
   if (!input.folderConnected) {
     todos.push({
       value: 'High',
-      title: 'Connect your WoW folder',
+      title: 'Connect the game data folder',
       why: 'Without it, everything below has to be typed in by hand.',
-      how: 'Sync page → download and run setup.bat, then "Choose WoW folder" → Documents\\ForeverGoldTracker. One time only.',
+      how: 'Sync & to-do → download and run setup.bat, then "Choose folder…" → Documents\\ForeverGoldTracker. One time only.',
     });
   } else if (!input.lastSync || now - input.lastSync > 2 * 86_400_000) {
     todos.push({
       value: 'Medium',
       title: 'No sync for more than 2 days',
       why: 'Gold, inventory and prices on this dashboard are getting old.',
-      how: 'Log out or type /gt sync in game, then switch back to this tab.',
+      how: 'Log out or type /reload in game, then switch back to this tab.',
     });
   }
 
@@ -63,7 +63,7 @@ export function buildTodos(input: TodoInput): Todo[] {
       value: 'High',
       title: `Addon can't read ${failed.map((c) => healthLabel(c.name)).join(', ')} in this game version`,
       why: 'That data stays empty or wrong on the dashboard until the addon is fixed.',
-      how: 'Sync page → Addon health shows the details. Run /gt check in game after an addon update, then /reload.',
+      how: 'Sync & to-do → Addon health shows the details. Run /gt check in game after an addon update, then /reload.',
       items: failed.map((c) => `${healthLabel(c.name)}: ${c.detail}`),
     });
   } else if (input.addonHealth === null && input.lastSync) {
@@ -71,7 +71,7 @@ export function buildTodos(input: TodoInput): Todo[] {
       value: 'Medium',
       title: 'No addon health check yet',
       why: 'You can\'t tell which data the addon records in this game version.',
-      how: 'Update the Gold Tracker addon to 0.2.0 or later. Type /gt check in game, then /reload.',
+      how: 'Run setup.bat again to update the Gold Tracker addon (0.2.0 or later). Then log in and type /reload.',
     });
   }
 
@@ -191,18 +191,23 @@ export function buildTodos(input: TodoInput): Todo[] {
 export const COVERAGE: { data: string; how: string; value: Value; auto: 'Automatic' | 'Partly' | 'Manual' }[] = [
   { data: 'Gold per character', how: 'Addon, every gold change', value: 'High', auto: 'Automatic' },
   { data: 'Income and expenses', how: 'Addon; category from the open window (vendor, AH, mail, trainer…)', value: 'High', auto: 'Automatic' },
-  { data: 'Bags', how: 'Addon, after every bag change', value: 'High', auto: 'Automatic' },
-  { data: 'Bank', how: 'Addon, each time you open the bank', value: 'Medium', auto: 'Automatic' },
+  { data: 'Bags', how: 'Addon, a few seconds after a bag change (after combat ends)', value: 'High', auto: 'Automatic' },
+  { data: 'Bank', how: 'Addon, when you open the bank (character bank, not the warband bank)', value: 'Medium', auto: 'Automatic' },
   { data: 'Vendor prices', how: 'Addon reads them from game data', value: 'High', auto: 'Automatic' },
+  { data: 'Item quality and bind type', how: 'Addon reads them from game data', value: 'Medium', auto: 'Automatic' },
+  { data: 'Soulbound status', how: 'Addon, per bag and bank slot', value: 'Medium', auto: 'Automatic' },
   { data: 'AH market prices', how: 'Auctionator (full scan or searches); you only press scan', value: 'High', auto: 'Partly' },
-  { data: 'Your AH sales, cut and deposit', how: 'Addon reads AH sale mails', value: 'High', auto: 'Automatic' },
+  { data: 'Your AH sales, cut and deposit', how: 'Addon reads AH sale mails when you open the mailbox', value: 'High', auto: 'Automatic' },
+  { data: 'Your AH purchases', how: 'Addon reads AH purchase mails when you open the mailbox', value: 'Low', auto: 'Automatic' },
   { data: 'Profession skill levels', how: 'Addon', value: 'Medium', auto: 'Automatic' },
-  { data: 'Recipes and materials', how: 'Addon, when you open a profession window', value: 'High', auto: 'Automatic' },
-  { data: 'Fishing sessions', how: 'Addon; starts on first catch, ends after 15 min idle', value: 'High', auto: 'Automatic' },
+  { data: 'Recipes and materials', how: 'Addon, your learned recipes, when you open a profession window', value: 'High', auto: 'Automatic' },
+  { data: 'Fishing sessions', how: 'Addon; starts on first catch, ends after 15 min without a catch, a zone change or logout', value: 'High', auto: 'Automatic' },
   { data: 'Trunk and fish contents', how: 'Addon, when you open them during a session', value: 'High', auto: 'Automatic' },
-  { data: 'Farming sessions', how: 'Type /gt start farming and /gt stop', value: 'Medium', auto: 'Partly' },
+  { data: 'Farming sessions', how: 'Type /gt start farming and /gt stop (logout also ends it)', value: 'Medium', auto: 'Partly' },
   { data: 'Pools vs open water, fish rack', how: 'You set it on the session', value: 'Low', auto: 'Manual' },
   { data: 'Pattern cost', how: 'You enter it for bought patterns', value: 'Low', auto: 'Manual' },
   { data: 'Savings goals', how: 'You add them once', value: 'Low', auto: 'Manual' },
+  { data: 'Addon health', how: 'Addon checks itself 10 s after each login; /gt check runs it again', value: 'Medium', auto: 'Automatic' },
+  { data: 'Send to bank alt list', how: 'Calculated from synced bags and banks; you choose the bank alt once', value: 'Medium', auto: 'Partly' },
   { data: 'Disenchant results', how: 'Not yet (no verified data)', value: 'Medium', auto: 'Manual' },
 ];
