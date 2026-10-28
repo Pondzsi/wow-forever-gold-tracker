@@ -49,6 +49,7 @@ export interface Item {
   bound?: boolean; // every copy you hold is soulbound: can't be sold on the AH
   bindType?: number; // game bind type: 1 pickup, 2 equip, 3 use, 4 quest, 7/8/9 account (warbound)
   quality?: number; // 0 poor, 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary
+  keepOnCharacter?: boolean; // "never send": stays on the character that holds it (potions, food, poisons)
 }
 
 /** Bind types that can never be listed on the AH: on pickup, quest, account/warbound. */
@@ -59,6 +60,15 @@ export function canSellOnAH(item: Item | undefined): boolean {
   if (!item) return true;
   if (item.bound) return false;
   return item.bindType === undefined || !NO_AH_BIND_TYPES.has(item.bindType);
+}
+
+/**
+ * False when the item can't go to another character by normal mail:
+ * soulbound, quest, or warbound (warbound items move through the warband bank instead).
+ * Same bind types as the AH rule.
+ */
+export function canMail(item: Item | undefined): boolean {
+  return canSellOnAH(item);
 }
 
 export function bindLabel(item: Item | undefined): string | null {
@@ -174,7 +184,15 @@ export interface Settings {
   observedDepositRefunded?: boolean;
   auctionatorRealm?: string; // which realm's prices to use, when several
   wowheadTooltips?: boolean; // item icons and tooltips from Wowhead; on unless set to false
+  bankAltCharacterId?: number; // the character that stores, sells and crafts
+  mailPostage?: number; // copper per mail; DEFAULT_MAIL_POSTAGE when unset
+  itemsPerMail?: number; // item slots per mail; DEFAULT_ITEMS_PER_MAIL when unset
 }
+
+/** Postage per mail in copper. Classic value, not verified for Forever. */
+export const DEFAULT_MAIL_POSTAGE = 30;
+/** Item slots per mail. Retail value, not verified for Forever. */
+export const DEFAULT_ITEMS_PER_MAIL = 12;
 
 /** Small key/value store for sync state (folder handle, last import). */
 export interface Meta {

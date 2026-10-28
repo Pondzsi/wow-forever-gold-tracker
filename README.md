@@ -27,6 +27,7 @@ Design and scope: [docs/v1-spec.md](docs/v1-spec.md).
 - WoW saves addon data only on logout or reload. Type `/gt sync` to save now, then switch to the dashboard tab:
   it syncs by itself.
 - **Sync & to-do** lists what still needs you, ranked High / Medium / Low.
+- **Send to bank alt** lists what your other characters should mail to the bank alt. Choose the bank alt there once.
 
 Other commands: `/gt status`, `/gt` (help).
 

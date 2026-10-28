@@ -5,11 +5,12 @@ import {
   evaluateRecipe,
   goldChangeSince,
   latestPrices,
+  planBankAltMail,
   sessionStats,
   summarizeContainers,
   vendorBeatsAH,
 } from './calc';
-import type { Item, Price } from './db';
+import type { Character, InventoryRow, Item, Price, Recipe } from './db';
 
 const price = (itemId: number, copper: number, time = 1): Price => ({
   itemId,
@@ -175,5 +176,145 @@ describe('decideHoldings', () => {
   it('flags old prices', () => {
     const d = decideHoldings(new Map([[1, 1]]), it2, latestPrices([price(1, 500, 0)]), fees, [], 3, 10 * 86_400_000);
     expect(d[0].stale).toBe(true);
+  });
+});
+
+describe('planBankAltMail', () => {
+  const fees = { ahCutPercent: 5 };
+  const rogue: Character = { id: 1, name: 'Rogue', className: 'Rogue', professions: ['Skinning', 'Leatherworking'] };
+  const mage: Character = { id: 2, name: 'Mage', className: 'Mage', professions: ['Tailoring', 'Enchanting'] };
+  const it3 = new Map<number, Item>([
+    [1, { id: 1, name: 'Silk Cloth', vendorPrice: 100 }],
+    [2, { id: 2, name: 'Silk Bag', vendorPrice: 2000 }],
+    [3, { id: 3, name: 'Light Leather', vendorPrice: 15 }],
+    [4, { id: 4, name: 'Leather Belt', vendorPrice: 300 }],
+    [5, { id: 5, name: 'Iron Ore', vendorPrice: 50 }],
+    [6, { id: 6, name: 'Gray Junk', vendorPrice: 40 }],
+    [7, { id: 7, name: 'Soulbound Ring', vendorPrice: 900, bound: true }],
+    [8, { id: 8, name: 'Warbound Pet', bindType: 8 }],
+    [9, { id: 9, name: 'Healing Potion', vendorPrice: 25 }],
+    [10, { id: 10, name: 'Odd Rock' }],
+    [11, { id: 11, name: 'Copper Bar', vendorPrice: 1 }],
+    [12, { id: 12, name: 'Mystery Herb', vendorPrice: 30 }],
+  ]);
+  const bag: Recipe = { profession: 'Tailoring', productItemId: 2, productCount: 1, reagents: [{ itemId: 1, count: 3 }] };
+  const belt: Recipe = { profession: 'Leatherworking', productItemId: 4, productCount: 1, reagents: [{ itemId: 3, count: 4 }] };
+  const prices = [price(1, 3000, 5), price(2, 15000, 5), price(3, 200, 5), price(4, 1500, 5), price(5, 400, 5), price(6, 40, 5), price(9, 100, 5), price(11, 3, 5)];
+  const inv = (characterId: number, itemId: number, count: number, location: 'bags' | 'bank' = 'bags'): InventoryRow => ({
+    characterId,
+    location,
+    itemId,
+    count,
+    updated: 0,
+  });
+  const plan = (inventory: InventoryRow[], opts: { items?: Map<number, Item>; recipes?: Recipe[]; itemsPerMail?: number } = {}) =>
+    planBankAltMail({
+      bankAltId: 2,
+      characters: [rogue, mage],
+      inventory,
+      items: opts.items ?? it3,
+      prices: latestPrices(prices),
+      fees,
+      recipes: opts.recipes ?? [bag, belt],
+      staleDays: 3,
+      postage: 30,
+      itemsPerMail: opts.itemsPerMail ?? 12,
+      now: 10,
+    });
+  const rows = (inventory: InventoryRow[], opts?: Parameters<typeof plan>[1]) =>
+    new Map(plan(inventory, opts)[0].rows.map((r) => [r.itemId, r]));
+
+  it('plans only for characters other than the bank alt', () => {
+    const p = plan([inv(1, 5, 10), inv(2, 5, 10)]);
+    expect(p.map((s) => s.characterId)).toEqual([1]);
+  });
+
+  it('returns nothing when the bank alt is unknown', () => {
+    const p = planBankAltMail({
+      bankAltId: 99,
+      characters: [rogue, mage],
+      inventory: [inv(1, 5, 1)],
+      items: it3,
+      prices: latestPrices(prices),
+      fees,
+      recipes: [],
+      staleDays: 3,
+      postage: 30,
+      itemsPerMail: 12,
+    });
+    expect(p).toEqual([]);
+  });
+
+  it('adds bags and bank of one character into one stack', () => {
+    const r = rows([inv(1, 5, 10, 'bags'), inv(1, 5, 5, 'bank')]).get(5)!;
+    expect(r.count).toBe(15);
+    expect(r.locations).toEqual(['bags', 'bank']);
+  });
+
+  it('leaves out soulbound and warbound items', () => {
+    const r = rows([inv(1, 7, 1), inv(1, 8, 1), inv(1, 5, 1)]);
+    expect([...r.keys()]).toEqual([5]);
+  });
+
+  it('keeps items marked "never send"', () => {
+    const items = new Map(it3);
+    items.set(9, { ...it3.get(9)!, keepOnCharacter: true });
+    const r = rows([inv(1, 9, 20)], { items }).get(9)!;
+    expect(r.action).toBe('Keep here');
+    expect(r.reason).toMatch(/never send/i);
+  });
+
+  it("keeps materials of the sender's own professions", () => {
+    const r = rows([inv(1, 3, 20)]).get(3)!;
+    expect(r.action).toBe('Keep here');
+    expect(r.reason).toMatch(/Leatherworking/);
+  });
+
+  it('sends materials the bank alt crafts with', () => {
+    const r = rows([inv(1, 1, 6)]).get(1)!;
+    expect(r.action).toBe('Send');
+    expect(r.reason).toMatch(/Silk Bag/);
+    expect(r.value).toBe(ahNet(3000, 6, fees));
+  });
+
+  it('does not send materials when crafting is not the best option', () => {
+    const cheapBag = [price(1, 3000, 5), price(2, 5000, 5)];
+    const p = planBankAltMail({
+      bankAltId: 2,
+      characters: [rogue, mage],
+      inventory: [inv(1, 1, 6)],
+      items: it3,
+      prices: latestPrices(cheapBag),
+      fees,
+      recipes: [bag],
+      staleDays: 3,
+      postage: 30,
+      itemsPerMail: 12,
+      now: 10,
+    });
+    expect(p[0].rows[0].action).toBe('Send to sell');
+  });
+
+  it('maps the sell list decisions to send actions', () => {
+    const r = rows([inv(1, 5, 10), inv(1, 6, 3), inv(1, 12, 2), inv(1, 10, 1)]);
+    expect(r.get(5)!.action).toBe('Send to sell');
+    expect(r.get(6)!.action).toBe('Vendor here');
+    expect(r.get(12)!.action).toBe('Send, check AH there');
+    expect(r.get(10)!.action).toBe('Keep here');
+  });
+
+  it('vendors here when a stack is worth less than its share of the postage', () => {
+    // 30c postage / 12 slots = 2.5c per slot. One Copper Bar nets 2c on the AH (more than its 1c vendor price).
+    const r = rows([inv(1, 11, 1)]).get(11)!;
+    expect(r.action).toBe('Vendor here');
+    expect(r.reason).toMatch(/postage/);
+  });
+
+  it('builds the mail plan from the stacks to send', () => {
+    const p = plan([inv(1, 5, 10), inv(1, 1, 6), inv(1, 12, 2), inv(1, 6, 3)], { itemsPerMail: 2 })[0];
+    expect(p.plan.stacks).toBe(3);
+    expect(p.plan.mails).toBe(2);
+    expect(p.plan.postage).toBe(60);
+    expect(p.plan.value).toBe(ahNet(400, 10, fees) + ahNet(3000, 6, fees) + 60);
   });
 });
