@@ -23,10 +23,13 @@ import {
   useCharacters,
   useItems,
   usePriceMap,
+  EmptyState,
+  Skeleton,
 } from '../ui';
 
 export function Sessions() {
-  const sessions = useLiveQuery(() => db.sessions.orderBy('start').reverse().toArray(), []) ?? [];
+  const sessionsQ = useLiveQuery(() => db.sessions.orderBy('start').reverse().toArray(), []);
+  const sessions = sessionsQ ?? [];
   const sessionItems = useLiveQuery(() => db.sessionItems.toArray(), []) ?? [];
   const opens = useLiveQuery(() => db.containerOpens.toArray(), []) ?? [];
   const prices = usePriceMap();
@@ -54,9 +57,13 @@ export function Sessions() {
       <div className="card">
         <h3>Finished sessions</h3>
         {done.length === 0 ? (
-          <p className="muted">No finished sessions yet.</p>
+          sessionsQ === undefined ? (
+          <Skeleton />
         ) : (
-          <table>
+          <EmptyState>No finished sessions yet. Fishing sessions start by themselves on your first catch. For farming, type <code>/gt start farming</code> in game.</EmptyState>
+        )
+        ) : (
+          <div className="table-wrap"><table>
             <thead>
               <tr>
                 <th>Start</th>
@@ -135,7 +142,7 @@ export function Sessions() {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
         <p className="hint">
           Items value uses the latest recorded prices, so it changes as prices change. Unpriced items count as zero.
@@ -370,7 +377,7 @@ function ActiveSession({
   const looseItems = sessionItems.filter((i) => i.containerOpenId === undefined);
 
   return (
-    <div className="card" style={{ borderColor: '#3b4f75' }}>
+    <div className="card active-session">
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
         <h3>
           Active: {session.type} · {session.zone} · {charName(characters, session.characterId)}
@@ -402,7 +409,7 @@ function ActiveSession({
         </button>
       </form>
       {looseItems.length > 0 && (
-        <table style={{ marginBottom: 12 }}>
+        <div className="table-wrap"><table style={{ marginBottom: 12 }}>
           <tbody>
             {looseItems.map((i) => (
               <tr key={i.id}>
@@ -419,7 +426,7 @@ function ActiveSession({
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
 
       {session.type === 'fishing' && (
@@ -472,7 +479,7 @@ function ActiveSession({
             for the next one.
           </p>
           {opens.length > 0 && (
-            <table style={{ marginTop: 8 }}>
+            <div className="table-wrap"><table style={{ marginTop: 8 }}>
               <tbody>
                 {opens.map((o) => (
                   <tr key={o.id}>
@@ -505,7 +512,7 @@ function ActiveSession({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </>
       )}
@@ -590,7 +597,7 @@ function FishingStats({
       <h3>Fishing results</h3>
       <div className="grid">
         <div>
-          <table>
+          <div className="table-wrap"><table>
             <thead>
               <tr>
                 <th>Group</th>
@@ -611,10 +618,10 @@ function FishingStats({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
         <div>
-          <table>
+          <div className="table-wrap"><table>
             <thead>
               <tr>
                 <th>Container</th>
@@ -642,7 +649,7 @@ function FishingStats({
                 ))
               )}
             </tbody>
-          </table>
+          </table></div>
         </div>
       </div>
       <p className="hint">Small samples are unreliable. Compare groups after several sessions each.</p>

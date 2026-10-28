@@ -1,3 +1,18 @@
+import {
+  Backpack,
+  BookOpen,
+  Ellipsis,
+  Fish,
+  GraduationCap,
+  Hammer,
+  Home,
+  RefreshCw,
+  Scale,
+  Settings as SettingsIcon,
+  Target,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { useEffect, useState, type ComponentType } from 'react';
 import { GAME_VERSIONS, gameVersion, setGameVersion } from './db';
 import { Crafting } from './pages/Crafting';
@@ -11,29 +26,40 @@ import { Sessions } from './pages/Sessions';
 import { SettingsPage } from './pages/Settings';
 import { describeResult, Sync } from './pages/Sync';
 import { autoSync } from './sync/folder';
+import { ToastProvider, useToast } from './toast';
 import { useTodos } from './useTodos';
 
-const PAGES: { path: string; label: string; component: ComponentType }[] = [
-  { path: 'overview', label: 'Overview', component: Overview },
-  { path: 'sync', label: 'Sync & to-do', component: Sync },
-  { path: 'ledger', label: 'Ledger', component: Ledger },
-  { path: 'inventory', label: 'Inventory', component: Inventory },
-  { path: 'prices', label: 'Prices', component: Prices },
-  { path: 'crafting', label: 'Crafting', component: Crafting },
-  { path: 'professions', label: 'Professions', component: Professions },
-  { path: 'sessions', label: 'Sessions', component: Sessions },
-  { path: 'goals', label: 'Goals', component: Goals },
-  { path: 'settings', label: 'Settings & backup', component: SettingsPage },
+interface NavItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+  group: string;
+  component: ComponentType;
+  mobile?: boolean; // shown in the phone bottom bar
+}
+
+const NAV: NavItem[] = [
+  { path: 'overview', label: 'Overview', icon: Home, group: '', component: Overview, mobile: true },
+  { path: 'ledger', label: 'Ledger', icon: BookOpen, group: 'Money', component: Ledger, mobile: true },
+  { path: 'goals', label: 'Goals', icon: Target, group: 'Money', component: Goals },
+  { path: 'prices', label: 'Prices', icon: Scale, group: 'Market', component: Prices, mobile: true },
+  { path: 'inventory', label: 'Inventory', icon: Backpack, group: 'Market', component: Inventory },
+  { path: 'crafting', label: 'Crafting', icon: Hammer, group: 'Market', component: Crafting },
+  { path: 'sessions', label: 'Sessions', icon: Fish, group: 'Play', component: Sessions, mobile: true },
+  { path: 'professions', label: 'Professions', icon: GraduationCap, group: 'Play', component: Professions },
+  { path: 'sync', label: 'Sync & to-do', icon: RefreshCw, group: 'Setup', component: Sync },
+  { path: 'settings', label: 'Settings', icon: SettingsIcon, group: 'Setup', component: SettingsPage },
 ];
+const GROUPS = [...new Set(NAV.map((n) => n.group))];
 
 function currentPath(): string {
   const p = window.location.hash.replace(/^#\/?/, '');
-  return PAGES.some((x) => x.path === p) ? p : 'overview';
+  return NAV.some((x) => x.path === p) ? p : 'overview';
 }
 
 /** Syncs quietly whenever the tab gets focus, e.g. after alt-tabbing out of WoW. */
-function useAutoSync(): string {
-  const [note, setNote] = useState('');
+function useAutoSync() {
+  const toast = useToast();
   useEffect(() => {
     let running = false;
     const run = async () => {
@@ -41,9 +67,12 @@ function useAutoSync(): string {
       running = true;
       try {
         const r = await autoSync();
-        if (r) setNote(`Synced: ${describeResult(r)}`);
+        if (r) {
+          const warned = !!r.addon?.warnings.length;
+          toast({ text: `Synced: ${describeResult(r)}`, tone: warned ? 'warn' : 'good', ms: warned ? 10000 : 5000 });
+        }
       } catch (e) {
-        setNote(`Sync failed: ${(e as Error).message}`);
+        toast({ text: `Sync failed: ${(e as Error).message}`, tone: 'bad', ms: 10000 });
       } finally {
         running = false;
       }
@@ -55,51 +84,152 @@ function useAutoSync(): string {
       window.removeEventListener('focus', run);
       document.removeEventListener('visibilitychange', run);
     };
-  }, []);
-  useEffect(() => {
-    if (!note) return;
-    const t = setTimeout(() => setNote(''), 8000);
-    return () => clearTimeout(t);
-  }, [note]);
-  return note;
+  }, [toast]);
 }
 
-export function App() {
+function VersionSelect() {
+  return (
+    <label className="version-select" title="Each game version keeps its own data">
+      <span className="small muted">Game version</span>
+      <select value={gameVersion} onChange={(e) => setGameVersion(e.target.value)}>
+        {GAME_VERSIONS.map((v) => (
+          <option key={v.id} value={v.id}>
+            {v.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function NavLinks({ path, high, onPick }: { path: string; high: number; onPick?: () => void }) {
+  return (
+    <>
+      {GROUPS.map((g) => (
+        <div key={g || 'home'} role="group" aria-label={g || 'Home'}>
+          {g && <div className="nav-group-label">{g}</div>}
+          {NAV.filter((n) => n.group === g).map((n) => (
+            <a
+              key={n.path}
+              href={`#/${n.path}`}
+              className={`nav-link ${n.path === path ? 'active' : ''}`}
+              aria-current={n.path === path ? 'page' : undefined}
+              title={n.label}
+              onClick={onPick}
+            >
+              <n.icon size={18} strokeWidth={1.75} aria-hidden />
+              <span className="label">{n.label}</span>
+              {n.path === 'sync' && high > 0 && (
+                <span className="badge count" aria-label={`${high} important to-dos`}>
+                  {high}
+                </span>
+              )}
+            </a>
+          ))}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function Shell() {
   const [path, setPath] = useState(currentPath);
-  const note = useAutoSync();
+  const [moreOpen, setMoreOpen] = useState(false);
+  useAutoSync();
   const high = useTodos().filter((t) => t.value === 'High').length;
+
   useEffect(() => {
-    const onHash = () => setPath(currentPath());
+    const onHash = () => {
+      setPath(currentPath());
+      setMoreOpen(false);
+      window.scrollTo(0, 0);
+    };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
-  const Page = PAGES.find((p) => p.path === path)!.component;
+
+  const page = NAV.find((p) => p.path === path)!;
+  useEffect(() => {
+    document.title = `${page.label} · Forever Gold`;
+  }, [page]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMoreOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [moreOpen]);
+
+  const Page = page.component;
+  const inMore = !page.mobile;
 
   return (
     <div className="app">
-      <nav className="side">
-        <h1>Forever Gold</h1>
-        <label className="version-select" title="Each game version keeps its own data">
-          <span className="small muted">Game version</span>
-          <select value={gameVersion} onChange={(e) => setGameVersion(e.target.value)}>
-            {GAME_VERSIONS.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {PAGES.map((p) => (
-          <a key={p.path} href={`#/${p.path}`} className={p.path === path ? 'active' : ''}>
-            {p.label}
-            {p.path === 'sync' && high > 0 && <span className="badge Craft" style={{ marginLeft: 6 }}>{high}</span>}
-          </a>
-        ))}
+      <a className="skip-link" href="#main" onClick={(e) => (e.preventDefault(), document.getElementById('main')?.focus())}>
+        Skip to content
+      </a>
+
+      <nav className="side" aria-label="Main">
+        <div className="brand">Forever Gold</div>
+        <VersionSelect />
+        <NavLinks path={path} high={high} />
+        <div className="nav-footer">Fan-made tool. Not affiliated with Blizzard Entertainment or Wowhead.</div>
       </nav>
-      <main>
-        {note && <div className="card small">{note}</div>}
+
+      <main id="main" tabIndex={-1}>
         <Page />
       </main>
+
+      <nav className="bottom-bar" aria-label="Main">
+        {NAV.filter((n) => n.mobile).map((n) => (
+          <a
+            key={n.path}
+            href={`#/${n.path}`}
+            className={n.path === path ? 'active' : ''}
+            aria-current={n.path === path ? 'page' : undefined}
+          >
+            <n.icon size={20} strokeWidth={1.75} aria-hidden />
+            {n.label}
+          </a>
+        ))}
+        <button
+          className={inMore ? 'active' : ''}
+          aria-expanded={moreOpen}
+          aria-controls="more-sheet"
+          onClick={() => setMoreOpen(true)}
+        >
+          <Ellipsis size={20} strokeWidth={1.75} aria-hidden />
+          More
+          {high > 0 && <span className="badge count">{high}</span>}
+        </button>
+      </nav>
+
+      {moreOpen && (
+        <>
+          <div className="sheet-backdrop" onClick={() => setMoreOpen(false)} />
+          <div className="more-sheet" id="more-sheet" role="dialog" aria-label="All pages">
+            <div className="sheet-head">
+              <span className="brand" style={{ margin: 0 }}>
+                Forever Gold
+              </span>
+              <button className="link" aria-label="Close" onClick={() => setMoreOpen(false)}>
+                <X size={22} />
+              </button>
+            </div>
+            <NavLinks path={path} high={high} onPick={() => setMoreOpen(false)} />
+            <VersionSelect />
+            <div className="nav-footer">Fan-made tool. Not affiliated with Blizzard Entertainment or Wowhead.</div>
+          </div>
+        </>
+      )}
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <ToastProvider>
+      <Shell />
+    </ToastProvider>
   );
 }

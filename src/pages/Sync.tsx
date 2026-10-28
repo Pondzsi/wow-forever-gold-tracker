@@ -199,7 +199,7 @@ export function Sync() {
         {todos.length === 0 ? (
           <p className="good">Nothing. Everything is filled in automatically.</p>
         ) : (
-          <table>
+          <div className="table-wrap"><table>
             <thead>
               <tr>
                 <th>Value</th>
@@ -222,13 +222,13 @@ export function Sync() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
       <div className="card">
         <h3>What fills in by itself</h3>
-        <table>
+        <div className="table-wrap"><table>
           <thead>
             <tr>
               <th>Data</th>
@@ -249,7 +249,7 @@ export function Sync() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
         <p className="hint">
           Requires the Gold Tracker addon and Auctionator. The addon's game calls are not verified on Forever yet; check
           this page after your first session at launch.

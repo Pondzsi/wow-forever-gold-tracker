@@ -11,11 +11,16 @@ import {
   MoneyField,
   toLocalInput,
   useCharacters,
+  EmptyState,
+  Skeleton,
 } from '../ui';
+import { deleteWithUndo, useToast } from '../toast';
 
 export function Ledger() {
+  const toast = useToast();
   const characters = useCharacters();
-  const entries = useLiveQuery(() => db.ledger.orderBy('time').reverse().toArray(), []) ?? [];
+  const entriesQ = useLiveQuery(() => db.ledger.orderBy('time').reverse().toArray(), []);
+  const entries = entriesQ ?? [];
 
   const [characterId, setCharacterId] = useState<number | 'all'>(-1);
   const [kind, setKind] = useState<'income' | 'expense'>('income');
@@ -126,9 +131,13 @@ export function Ledger() {
           </div>
         </div>
         {shown.length === 0 ? (
-          <p className="muted">No entries.</p>
+          entriesQ === undefined ? (
+          <Skeleton />
         ) : (
-          <table>
+          <EmptyState>No entries. Gold changes arrive with each sync after you play. See <a href="#/sync">Sync &amp; to-do</a>.</EmptyState>
+        )
+        ) : (
+          <div className="table-wrap"><table>
             <thead>
               <tr>
                 <th>Date</th>
@@ -152,14 +161,14 @@ export function Ledger() {
                     <Money copper={e.copper} signed />
                   </td>
                   <td className="num">
-                    <button className="link" title="Delete" onClick={() => db.ledger.delete(e.id!)}>
+                    <button className="link" title="Delete" onClick={() => void deleteWithUndo(db.ledger, e.id!, 'Ledger entry', toast)}>
                       ✕
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </>

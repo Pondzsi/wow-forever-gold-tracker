@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { goldAt, goldChangeSince } from '../calc';
 import { db } from '../db';
 import { parseMoney } from '../money';
-import { charName, Money, MoneyField, useCharacters } from '../ui';
+import { charName, Money, MoneyField, useCharacters, EmptyState, Skeleton } from '../ui';
+import { deleteWithUndo, useToast } from '../toast';
 
 const DAY = 86_400_000;
 
@@ -28,8 +29,10 @@ const PRESETS: { name: string; target: string; note: string }[] = [
 ];
 
 export function Goals() {
+  const toast = useToast();
   const characters = useCharacters();
-  const goals = useLiveQuery(() => db.goals.toArray(), []) ?? [];
+  const goalsQ = useLiveQuery(() => db.goals.toArray(), []);
+  const goals = goalsQ ?? [];
   const snapshots = useLiveQuery(() => db.goldSnapshots.toArray(), []) ?? [];
 
   const [name, setName] = useState('');
@@ -111,7 +114,7 @@ export function Goals() {
       </div>
 
       {goals.length === 0 ? (
-        <p className="muted">No goals yet.</p>
+        goalsQ === undefined ? <Skeleton /> : <EmptyState>No goals yet. Pick a preset above to start.</EmptyState>
       ) : (
         goals.map((g) => {
           const current = goldAt(snapshots, g.characterIds, now) ?? 0;
@@ -124,7 +127,7 @@ export function Goals() {
             <div className="card" key={g.id}>
               <div className="row" style={{ justifyContent: 'space-between' }}>
                 <h3>{g.name}</h3>
-                <button className="link" onClick={() => db.goals.delete(g.id!)} title="Delete">
+                <button className="link" onClick={() => void deleteWithUndo(db.goals, g.id!, 'Goal', toast)} title="Delete">
                   ✕
                 </button>
               </div>

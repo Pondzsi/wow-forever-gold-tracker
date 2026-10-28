@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { evaluateRecipe } from '../calc';
 import { db, getOrCreateItem, type Recipe } from '../db';
 import { formatMoney, parseMoney } from '../money';
-import { ItemField, Money, MoneyField, useItems, usePriceMap, useSettings } from '../ui';
+import { ItemField, Money, MoneyField, useItems, usePriceMap, useSettings, EmptyState, Skeleton } from '../ui';
+import { deleteWithUndo, useToast } from '../toast';
 
 const PROFESSIONS = ['Leatherworking', 'Tailoring', 'Enchanting', 'Cooking', 'First Aid', 'Other'];
 
@@ -13,10 +14,12 @@ interface ReagentDraft {
 }
 
 export function Crafting() {
+  const toast = useToast();
   const items = useItems();
   const prices = usePriceMap();
   const settings = useSettings();
-  const recipes = useLiveQuery(() => db.recipes.toArray(), []) ?? [];
+  const recipesQ = useLiveQuery(() => db.recipes.toArray(), []);
+  const recipes = recipesQ ?? [];
 
   const [editId, setEditId] = useState<number | null>(null);
   const [profession, setProfession] = useState('Tailoring');
@@ -178,9 +181,13 @@ export function Crafting() {
           </select>
         </div>
         {shown.length === 0 ? (
-          <p className="muted">No recipes yet. Add the ones you actually craft, such as bags.</p>
+          recipesQ === undefined ? (
+          <Skeleton />
         ) : (
-          <table>
+          <EmptyState>No recipes yet. They arrive when you open a profession window in game, or add one by hand above.</EmptyState>
+        )
+        ) : (
+          <div className="table-wrap"><table>
             <thead>
               <tr>
                 <th>Recipe</th>
@@ -237,7 +244,7 @@ export function Crafting() {
                       <button className="link" onClick={() => edit(r)} title="Edit">
                         ✎
                       </button>
-                      <button className="link" onClick={() => db.recipes.delete(r.id!)} title="Delete">
+                      <button className="link" onClick={() => void deleteWithUndo(db.recipes, r.id!, 'Recipe', toast)} title="Delete">
                         ✕
                       </button>
                     </td>
@@ -245,7 +252,7 @@ export function Crafting() {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
         <p className="hint">
           "Options per craft" shows what one craft's materials earn on each path. The verdict picks the highest. "Keep"

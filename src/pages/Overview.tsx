@@ -4,7 +4,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { goldAt, goldChangeSince, goldTimeline } from '../calc';
 import { db, type Character } from '../db';
 import { copperToGold, formatMoney, parseMoney } from '../money';
-import { charName, fmtAge, fmtDate, Money, MoneyField, useCharacters } from '../ui';
+import { charName, fmtAge, fmtDate, Money, MoneyField, themeColor, useCharacters } from '../ui';
 
 const DAY = 86_400_000;
 
@@ -35,15 +35,15 @@ export function Overview() {
         <div className="card">
           <div className="muted small">Total gold</div>
           <div className="stat">
-            <Money copper={total} />
+            <Money copper={total} size="xl" />
           </div>
-          <table style={{ marginTop: 8 }}>
+          <div className="table-wrap"><table style={{ marginTop: 8 }}>
             <tbody>
               <ChangeRow label="Today" value={goldChangeSince(snapshots, ids, startOfToday, now)} />
               <ChangeRow label="Last 7 days" value={goldChangeSince(snapshots, ids, now - 7 * DAY, now)} />
               <ChangeRow label="Since start" value={goldChangeSince(snapshots, ids, 0, now)} />
             </tbody>
-          </table>
+          </table></div>
         </div>
         {characters.map((c) => (
           <CharacterCard key={c.id} character={c} snapshots={snapshots.filter((s) => s.characterId === c.id)} />
@@ -57,23 +57,23 @@ export function Overview() {
         ) : (
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={timeline} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-              <CartesianGrid stroke="#30343e" strokeDasharray="3 3" />
+              <CartesianGrid stroke={themeColor('--border')} strokeDasharray="3 3" />
               <XAxis
                 dataKey="time"
                 type="number"
                 scale="time"
                 domain={['dataMin', 'dataMax']}
                 tickFormatter={(t: number) => new Date(t).toLocaleDateString()}
-                stroke="#9a9ca6"
+                stroke={themeColor('--muted')}
                 fontSize={12}
               />
-              <YAxis stroke="#9a9ca6" fontSize={12} unit="g" width={60} />
+              <YAxis stroke={themeColor('--muted')} fontSize={12} unit="g" width={60} />
               <Tooltip
-                contentStyle={{ background: '#1b1d23', border: '1px solid #30343e' }}
+                contentStyle={{ background: themeColor('--panel-2'), border: `1px solid ${themeColor('--trim')}`, color: themeColor('--text') }}
                 labelFormatter={(t) => fmtDate(Number(t))}
                 formatter={(v) => [formatMoney(Math.round(Number(v) * 10000)), 'Total']}
               />
-              <Line type="monotone" dataKey="gold" stroke="#ffd100" dot={false} strokeWidth={2} />
+              <Line type="monotone" dataKey="gold" stroke={themeColor('--gold')} dot={false} strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -82,9 +82,9 @@ export function Overview() {
       <div className="card">
         <h3>Recent ledger entries</h3>
         {ledger.length === 0 ? (
-          <p className="muted">No entries yet.</p>
+          <p className="muted">Gold changes appear here after your next sync.</p>
         ) : (
-          <table>
+          <div className="table-wrap"><table>
             <tbody>
               {ledger.map((e) => (
                 <tr key={e.id}>
@@ -98,7 +98,7 @@ export function Overview() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </>

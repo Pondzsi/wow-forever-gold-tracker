@@ -14,9 +14,12 @@ import {
   useItems,
   usePriceMap,
   useSettings,
+  EmptyState,
 } from '../ui';
+import { deleteWithUndo, useToast } from '../toast';
 
 export function Prices() {
+  const toast = useToast();
   const items = useItems();
   const latest = usePriceMap();
   const settings = useSettings();
@@ -99,9 +102,9 @@ export function Prices() {
           <input placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         {shownItems.length === 0 ? (
-          <p className="muted">No items yet. Record a price to add one.</p>
+          <EmptyState>No items yet. Prices come from Auctionator: run a full scan at the AH, then <code>/reload</code>. You can also record one by hand above.</EmptyState>
         ) : (
-          <table>
+          <div className="table-wrap"><table>
             <thead>
               <tr>
                 <th>Item</th>
@@ -157,7 +160,7 @@ export function Prices() {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
         <p className="hint">
           Vendor price: what a vendor pays you for one unit. Deposit: the AH deposit you saw for one unit. Leave either
@@ -172,7 +175,7 @@ export function Prices() {
           {history.length === 0 ? (
             <p className="muted">No prices recorded.</p>
           ) : (
-            <table>
+            <div className="table-wrap"><table>
               <thead>
                 <tr>
                   <th>Date</th>
@@ -192,14 +195,14 @@ export function Prices() {
                     <td className="small">{p.source}</td>
                     <td className="small">{p.note}</td>
                     <td className="num">
-                      <button className="link" title="Delete" onClick={() => db.prices.delete(p.id!)}>
+                      <button className="link" title="Delete" onClick={() => void deleteWithUndo(db.prices, p.id!, 'Price', toast)}>
                         ✕
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}

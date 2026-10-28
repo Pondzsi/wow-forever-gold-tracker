@@ -2,14 +2,15 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { isStale, vendorBeatsAH } from '../calc';
 import { bindLabel, db, getOrCreateItem, type InventoryLocation } from '../db';
-import { CharacterSelect, charName, fmtAge, ItemField, Money, useCharacters, useItems, usePriceMap, useSettings } from '../ui';
+import { CharacterSelect, charName, fmtAge, ItemField, Money, useCharacters, useItems, usePriceMap, useSettings, EmptyState, Skeleton } from '../ui';
 
 export function Inventory() {
   const characters = useCharacters();
   const items = useItems();
   const prices = usePriceMap();
   const settings = useSettings();
-  const rows = useLiveQuery(() => db.inventory.toArray(), []) ?? [];
+  const rowsQ = useLiveQuery(() => db.inventory.toArray(), []);
+  const rows = rowsQ ?? [];
 
   const [characterId, setCharacterId] = useState<number | 'all'>(-1);
   const [location, setLocation] = useState<InventoryLocation>('bags');
@@ -97,9 +98,13 @@ export function Inventory() {
           </div>
         </div>
         {list.length === 0 ? (
-          <p className="muted">No items recorded.</p>
+          rowsQ === undefined ? (
+          <Skeleton />
         ) : (
-          <table>
+          <EmptyState>No items yet. Your bags and bank arrive with the next sync (open the bank once in game for bank items). See <a href="#/sync">Sync &amp; to-do</a>.</EmptyState>
+        )
+        ) : (
+          <div className="table-wrap"><table>
             <thead>
               <tr>
                 <th>Item</th>
@@ -137,7 +142,7 @@ export function Inventory() {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </>

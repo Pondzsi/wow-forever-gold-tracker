@@ -26,21 +26,58 @@ export function usePriceMap(): PriceMap {
 
 // ---------- Display ----------
 
-export function Money({ copper, signed = false }: { copper: number | null | undefined; signed?: boolean }) {
+/** Gold/silver/copper with coin dots (CSS). Signed values color only the sign, so coin colors stay readable. */
+export function Money({
+  copper,
+  signed = false,
+  size,
+}: {
+  copper: number | null | undefined;
+  signed?: boolean;
+  size?: 'xl';
+}) {
   if (copper === null || copper === undefined) return <span className="muted">—</span>;
   const p = splitMoney(copper);
   const parts: ReactNode[] = [];
   if (p.gold) parts.push(<span key="g" className="g">{p.gold.toLocaleString()}g</span>);
   if (p.silver) parts.push(<span key="s" className="s">{p.silver}s</span>);
   if (p.copper || parts.length === 0) parts.push(<span key="c" className="c">{p.copper}c</span>);
-  const sign = p.negative && copper !== 0 ? '-' : signed && copper > 0 ? '+' : '';
-  const cls = signed ? (copper > 0 ? 'good' : copper < 0 ? 'bad' : '') : '';
+  const sign = p.negative && copper !== 0 ? '−' : signed && copper > 0 ? '+' : '';
+  const signCls = copper > 0 ? 'good' : copper < 0 ? 'bad' : '';
   return (
-    <span className={`money ${cls}`} title={formatMoney(copper)}>
-      {sign}
+    <span className={`money${size ? ` money-${size}` : ''}`} title={formatMoney(copper)}>
+      {sign && <span className={`sign ${signed ? signCls : ''}`}>{sign}</span>}
       {parts.reduce<ReactNode[]>((acc, el, i) => (i ? [...acc, ' ', el] : [el]), [])}
     </span>
   );
+}
+
+/** What a page shows when it has no data yet: where data comes from and what to do. */
+export function EmptyState({ icon, children, actions }: { icon?: ReactNode; children: ReactNode; actions?: ReactNode }) {
+  return (
+    <div className="empty">
+      {icon}
+      <div>{children}</div>
+      {actions && <div className="row">{actions}</div>}
+    </div>
+  );
+}
+
+/** Placeholder while the browser database loads, so "no data" never flashes. */
+export function Skeleton() {
+  return (
+    <div className="skeleton" aria-label="Loading">
+      <div />
+      <div />
+      <div />
+    </div>
+  );
+}
+
+/** Reads a theme color from tokens.css, for chart libraries that need plain values. */
+export function themeColor(name: string, fallback = '#888'): string {
+  if (typeof document === 'undefined') return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 }
 
 export function fmtDate(ms: number): string {

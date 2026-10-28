@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { db, type ProfessionSnapshot } from '../db';
-import { CharacterSelect, charName, fmtAge, fmtDate, useCharacters } from '../ui';
+import { CharacterSelect, charName, fmtAge, fmtDate, themeColor, useCharacters } from '../ui';
 
 const SECONDARY = ['Fishing', 'Cooking', 'First Aid'];
 
@@ -97,9 +97,9 @@ export function Professions() {
       <div className="card">
         <h3>Current levels</h3>
         {rows.length === 0 ? (
-          <p className="muted">No skill levels recorded.</p>
+          <p className="muted">No skill levels yet. They arrive with the next sync after you log in.</p>
         ) : (
-          <table>
+          <div className="table-wrap"><table>
             <thead>
               <tr>
                 <th>Character</th>
@@ -130,7 +130,7 @@ export function Professions() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
         <p className="hint">Click a row to see its history.</p>
       </div>
@@ -143,22 +143,22 @@ export function Professions() {
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke="#30343e" strokeDasharray="3 3" />
+                <CartesianGrid stroke={themeColor('--border')} strokeDasharray="3 3" />
                 <XAxis
                   dataKey="time"
                   type="number"
                   scale="time"
                   domain={['dataMin', 'dataMax']}
                   tickFormatter={(t: number) => new Date(t).toLocaleDateString()}
-                  stroke="#9a9ca6"
+                  stroke={themeColor('--muted')}
                   fontSize={12}
                 />
-                <YAxis stroke="#9a9ca6" fontSize={12} width={40} />
+                <YAxis stroke={themeColor('--muted')} fontSize={12} width={40} />
                 <Tooltip
-                  contentStyle={{ background: '#1b1d23', border: '1px solid #30343e' }}
+                  contentStyle={{ background: themeColor('--panel-2'), border: `1px solid ${themeColor('--trim')}`, color: themeColor('--text') }}
                   labelFormatter={(t) => fmtDate(Number(t))}
                 />
-                <Line type="stepAfter" dataKey="skill" stroke="#6aa5ff" strokeWidth={2} />
+                <Line type="stepAfter" dataKey="skill" stroke={themeColor('--accent')} strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           )}

@@ -120,7 +120,7 @@ export function SettingsPage() {
 
       <div className="card">
         <h3>Characters</h3>
-        <table>
+        <div className="table-wrap"><table>
           <thead>
             <tr>
               <th>Name</th>
@@ -133,7 +133,7 @@ export function SettingsPage() {
               <CharacterRow key={c.id} character={c} />
             ))}
           </tbody>
-        </table>
+        </table></div>
         <AddCharacter />
         <p className="hint">The addon sync adds your characters by itself. Add them here only if you don't use it.</p>
       </div>
