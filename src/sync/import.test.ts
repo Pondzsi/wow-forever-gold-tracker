@@ -90,7 +90,8 @@ describe('Auctionator import', () => {
   it('imports daily lows and the latest price for known items only', async () => {
     await importFile('GoldTracker.lua', goldTrackerFile);
     const { auctionator } = await importFile('Auctionator.lua', auctionatorFile);
-    expect(auctionator).toMatchObject({ realm: 'Realm', itemsWithPrices: 1, newPrices: 2 });
+    // Silk Cloth by plain id, Small Silk Pack through its gear key "g:4245:20".
+    expect(auctionator).toMatchObject({ realm: 'Realm', itemsWithPrices: 2, newPrices: 3 });
 
     const silk = await db.items.where({ gameItemId: 4306 }).first();
     const prices = (await db.prices.where({ itemId: silk!.id! }).toArray()).sort((a, b) => a.time - b.time);

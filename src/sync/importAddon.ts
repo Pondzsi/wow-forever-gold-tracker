@@ -26,6 +26,23 @@ const ms = (seconds: unknown) => (typeof seconds === 'number' ? seconds * 1000 :
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
 
+/**
+ * Removes WoW UI markup from item names. Retail adds a crafting-quality icon
+ * (|A:Professions-ChatIcon-Quality-12-Tier1:...|a); its tier is kept as "(tier 1)"
+ * because each tier is a different item.
+ */
+export function cleanItemName(raw: string): string {
+  const tier = /Quality-(?:\d+-)?Tier(\d)/i.exec(raw)?.[1];
+  const name = raw
+    .replace(/\|A:[^|]*\|a/g, '')
+    .replace(/\|T[^|]*\|t/g, '')
+    .replace(/\|c[0-9a-fA-F]{8}/g, '')
+    .replace(/\|r/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return tier ? `${name} (tier ${tier})` : name;
+}
+
 const CLASS_NAMES: Record<string, string> = {
   WARRIOR: 'Warrior', PALADIN: 'Paladin', HUNTER: 'Hunter', ROGUE: 'Rogue', PRIEST: 'Priest',
   SHAMAN: 'Shaman', MAGE: 'Mage', WARLOCK: 'Warlock', DRUID: 'Druid', DEATHKNIGHT: 'Death Knight',
@@ -51,12 +68,23 @@ export async function importGoldTracker(saved: Record<string, LuaValue>): Promis
     async function itemFor(gameId: number): Promise<number> {
       const known = byGameId.get(gameId);
       const info = gameItems[String(gameId)] ?? {};
-      const name = str(info.n);
+      const rawName = str(info.n);
+      let name = rawName ? cleanItemName(rawName) : undefined;
+      // Names are unique in the dashboard; a different item with the same name gets its id appended.
+      const clash = name ? byName.get(name.toLowerCase()) : undefined;
+      const conflict = known
+        ? clash && clash.id !== known.id
+        : clash && clash.gameItemId !== undefined && clash.gameItemId !== gameId;
+      if (name && conflict) name = `${name} #${gameId}`;
       const vendor = num(info.v);
       if (known) {
         const patch: Record<string, unknown> = {};
         if (vendor !== undefined && known.vendorPrice !== vendor) patch.vendorPrice = vendor;
-        if (name && known.name.startsWith('item #')) patch.name = name;
+        // Fix placeholder names and names saved with markup by an earlier version.
+        if (name && name !== known.name && (known.name.startsWith('item #') || known.name.includes('|'))) {
+          patch.name = name;
+          byName.set(name.toLowerCase(), known);
+        }
         if (Object.keys(patch).length) {
           await db.items.update(known.id!, patch);
           Object.assign(known, patch);
@@ -77,7 +105,8 @@ export async function importGoldTracker(saved: Record<string, LuaValue>): Promis
       return id;
     }
 
-    async function itemByName(name: string): Promise<number> {
+    async function itemByName(rawName: string): Promise<number> {
+      const name = cleanItemName(rawName);
       const known = byName.get(name.toLowerCase());
       if (known) return known.id!;
       const id = await db.items.add({ name });

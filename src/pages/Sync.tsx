@@ -85,7 +85,7 @@ export function Sync() {
       const out: string[] = [];
       // GoldTracker first, so its items exist before Auctionator prices are matched.
       const sorted = [...files].sort((a) => (a.name.startsWith('GoldTracker') ? -1 : 1));
-      for (const f of sorted) out.push(describeResult(await importFile(f.name, await f.text())));
+      for (const f of sorted) out.push(describeResult(await importFile(f.name, await f.arrayBuffer())));
       await db.meta.put({ key: 'lastSync', value: Date.now() });
       return out.join(' · ');
     });

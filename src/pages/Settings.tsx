@@ -184,9 +184,9 @@ function AuctionatorRealm() {
         onChange={async (e) => {
           const f = e.target.files?.[0];
           if (!f) return;
-          const { parseSavedVariables } = await import('../sync/luaParse');
+          const { parseSavedVariablesBytes } = await import('../sync/luaParse');
           const { listAuctionatorRealms } = await import('../sync/importAuctionator');
-          setRealms(listAuctionatorRealms(parseSavedVariables(await f.text())).map((r) => r.name));
+          setRealms(listAuctionatorRealms(parseSavedVariablesBytes(await f.arrayBuffer())).map((r) => r.name));
           e.target.value = '';
         }}
       />

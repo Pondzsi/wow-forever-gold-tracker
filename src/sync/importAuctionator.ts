@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { binaryStringToBytes, decodeCbor } from './cbor';
 import type { LuaValue } from './luaParse';
 
 // Auctionator saves AUCTIONATOR_PRICE_DATABASE in Auctionator.lua:
@@ -13,6 +14,59 @@ export function auctionatorDay0(): number {
   return new Date(2020, 0, 1, 0, 0, 0).getTime();
 }
 
+// Retail Auctionator (database version 8) stores each realm as one CBOR string;
+// older versions use a plain Lua table. Decoded realms are cached per parse.
+const decoded = new WeakMap<object, Map<string, Obj>>();
+
+function realmTables(saved: Record<string, LuaValue>): Map<string, Obj> {
+  const root = saved.AUCTIONATOR_PRICE_DATABASE as Obj | undefined;
+  if (!root || typeof root !== 'object') return new Map();
+  const cached = decoded.get(root);
+  if (cached) return cached;
+  const out = new Map<string, Obj>();
+  for (const [name, value] of Object.entries(root)) {
+    if (name.startsWith('__')) continue;
+    if (typeof value === 'string') {
+      try {
+        const data = decodeCbor(binaryStringToBytes(value));
+        if (data && typeof data === 'object' && !Array.isArray(data)) out.set(name, data as Obj);
+      } catch {
+        // Unknown encoding: skip this realm.
+      }
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      out.set(name, value as Obj);
+    }
+  }
+  decoded.set(root, out);
+  return out;
+}
+
+/** Entry for a game item id: the plain key, or a gear key "g:<id>:<ilvl>" as fallback. */
+function entryFor(data: Obj, gameId: number, gearIndex: Map<number, Obj>): Obj | undefined {
+  const plain = data[String(gameId)];
+  if (plain && typeof plain === 'object') return plain as Obj;
+  return gearIndex.get(gameId);
+}
+
+function buildGearIndex(data: Obj): Map<number, Obj> {
+  const index = new Map<number, Obj>();
+  for (const [key, entry] of Object.entries(data)) {
+    const m = /^g:(\d+):/.exec(key);
+    if (m && entry && typeof entry === 'object' && !index.has(Number(m[1]))) index.set(Number(m[1]), entry as Obj);
+  }
+  return index;
+}
+
+/** Day numbers with a price, from "h" (a {day: price} table; Lua arrays come back as lists). */
+function dayPrices(t: LuaValue | undefined): Map<number, number> {
+  const out = new Map<number, number>();
+  if (Array.isArray(t)) t.forEach((v, idx) => typeof v === 'number' && out.set(idx + 1, v));
+  else if (t && typeof t === 'object') {
+    for (const [d, v] of Object.entries(t)) if (/^\d+$/.test(d) && typeof v === 'number') out.set(Number(d), v);
+  }
+  return out;
+}
+
 export interface AuctionatorRealm {
   name: string;
   items: number;
@@ -20,18 +74,15 @@ export interface AuctionatorRealm {
 }
 
 export function listAuctionatorRealms(saved: Record<string, LuaValue>): AuctionatorRealm[] {
-  const root = saved.AUCTIONATOR_PRICE_DATABASE as Obj | undefined;
-  if (!root || typeof root !== 'object') return [];
   const day0 = auctionatorDay0();
-  return Object.entries(root)
-    .filter(([k, v]) => !k.startsWith('__') && v && typeof v === 'object')
+  return [...realmTables(saved).entries()]
     .map(([name, realm]) => {
       let last = -1;
       let items = 0;
-      for (const [key, entry] of Object.entries(realm as Obj)) {
-        if (!/^\d+$/.test(key) || !entry || typeof entry !== 'object') continue;
+      for (const entry of Object.values(realm)) {
+        if (!entry || typeof entry !== 'object') continue;
         items++;
-        for (const d of Object.keys(((entry as Obj).h ?? {}) as Obj)) last = Math.max(last, Number(d));
+        for (const d of dayPrices((entry as Obj).h).keys()) last = Math.max(last, d);
       }
       return { name, items, lastDay: last >= 0 ? day0 + last * DAY_MS : null };
     })
@@ -56,7 +107,8 @@ export async function importAuctionator(
   const realm = realms.find((r) => r.name === preferredRealm) ?? realms[0];
   if (!realm) return { realm: null, newPrices: 0, itemsWithPrices: 0 };
 
-  const data = (saved.AUCTIONATOR_PRICE_DATABASE as Obj)[realm.name] as Obj;
+  const data = realmTables(saved).get(realm.name)!;
+  const gearIndex = buildGearIndex(data);
   const day0 = auctionatorDay0();
   let newPrices = 0;
   let itemsWithPrices = 0;
@@ -66,18 +118,18 @@ export async function importAuctionator(
     const seen = new Set((await db.syncLog.where('id').startsWith('atr:').primaryKeys()) as string[]);
 
     for (const item of items) {
-      const entry = data[String(item.gameItemId)] as Obj | undefined;
-      if (!entry || typeof entry !== 'object') continue;
-      const highs = (entry.h ?? {}) as Obj;
-      const lows = (entry.l ?? {}) as Obj;
-      const days = Object.keys(highs).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+      const entry = entryFor(data, item.gameItemId!, gearIndex);
+      if (!entry) continue;
+      const highs = dayPrices(entry.h);
+      const lows = dayPrices(entry.l);
+      const days = [...highs.keys()].sort((a, b) => a - b);
       if (!days.length) continue;
       itemsWithPrices++;
       const lastDay = days[days.length - 1];
 
       for (const day of days) {
         // The day's lowest price: "l" is only stored when lower than "h".
-        const low = typeof lows[day] === 'number' ? (lows[day] as number) : (highs[day] as number);
+        const low = lows.get(day) ?? highs.get(day)!;
         const isLast = day === lastDay && typeof entry.m === 'number' && entry.m > 0;
         const copper = isLast ? (entry.m as number) : low;
         if (typeof copper !== 'number' || copper <= 0) continue;

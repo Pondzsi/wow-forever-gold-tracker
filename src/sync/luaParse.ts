@@ -159,6 +159,41 @@ export function parseSavedVariables(text: string): Record<string, LuaValue> {
   return new Parser(text.replace(/^﻿/, '')).parseFile();
 }
 
+/**
+ * Parses a SavedVariables file from its raw bytes. Strings keep their exact
+ * bytes (char codes 0-255), which binary data like Auctionator's CBOR needs.
+ * Use utf8Strings() afterwards on parts that hold readable text.
+ */
+export function parseSavedVariablesBytes(buffer: ArrayBuffer): Record<string, LuaValue> {
+  const bytes = new Uint8Array(buffer);
+  const start = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0; // UTF-8 BOM
+  let text = '';
+  for (let k = start; k < bytes.length; k += 8192) {
+    text += String.fromCharCode(...bytes.subarray(k, Math.min(bytes.length, k + 8192)));
+  }
+  return new Parser(text).parseFile();
+}
+
+const utf8 = new TextDecoder('utf-8');
+
+/** Turns byte strings (from parseSavedVariablesBytes) into readable UTF-8 text, deeply. */
+export function utf8Strings(v: LuaValue): LuaValue {
+  if (typeof v === 'string') {
+    // Plain ASCII needs no work.
+    if (!/[\u0080-ÿ]/.test(v)) return v;
+    const b = new Uint8Array(v.length);
+    for (let k = 0; k < v.length; k++) b[k] = v.charCodeAt(k) & 0xff;
+    return utf8.decode(b);
+  }
+  if (Array.isArray(v)) return v.map(utf8Strings);
+  if (v && typeof v === 'object') {
+    const out: { [key: string]: LuaValue } = {};
+    for (const [k, x] of Object.entries(v)) out[utf8Strings(k) as string] = utf8Strings(x);
+    return out;
+  }
+  return v;
+}
+
 /** Lua tables that are empty or sparse arrive as objects; this gives a list either way. */
 export function asArray<T = LuaValue>(v: LuaValue | undefined): T[] {
   if (Array.isArray(v)) return v as T[];

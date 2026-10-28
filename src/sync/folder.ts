@@ -3,9 +3,12 @@
 import { db } from '../db';
 import { importAuctionator, type AuctionatorReport } from './importAuctionator';
 import { importGoldTracker, type ImportReport } from './importAddon';
-import { parseSavedVariables } from './luaParse';
+import { parseSavedVariables, parseSavedVariablesBytes, utf8Strings } from './luaParse';
 
-const SKIP_DIRS = new Set(['data', 'cache', 'logs', 'errors', 'screenshots', 'interface', 'utils', 'fonts']);
+/** Raise when the importers change, so existing users re-read their files once. */
+const IMPORT_VERSION = 2;
+
+const SKIP_DIRS =new Set(['data', 'cache', 'logs', 'errors', 'screenshots', 'interface', 'utils', 'fonts']);
 const FILES = ['GoldTracker.lua', 'Auctionator.lua'] as const;
 type FileName = (typeof FILES)[number];
 
@@ -118,9 +121,12 @@ async function lastModifiedSeen(name: string): Promise<number> {
 }
 
 /** Imports a file's contents. Used by folder sync and by manual file upload. */
-export async function importFile(name: string, text: string): Promise<Partial<SyncResult>> {
-  const saved = parseSavedVariables(text);
+export async function importFile(name: string, data: string | ArrayBuffer): Promise<Partial<SyncResult>> {
+  // Raw bytes keep Auctionator's binary price data intact; text is converted to UTF-8 where needed.
+  const fromBytes = typeof data !== 'string';
+  const saved = fromBytes ? parseSavedVariablesBytes(data) : parseSavedVariables(data);
   if (saved.GoldTrackerDB) {
+    if (fromBytes) saved.GoldTrackerDB = utf8Strings(saved.GoldTrackerDB);
     const addon = await importGoldTracker(saved);
     await db.meta.put({ key: 'imported:GoldTracker.lua', value: Date.now() });
     if (addon.characters.length) await db.meta.put({ key: 'hasData:GoldTracker.lua', value: true });
@@ -141,6 +147,8 @@ export async function importFile(name: string, text: string): Promise<Partial<Sy
  * GoldTracker goes first so new items exist before Auctionator prices are matched.
  */
 export async function syncFromFolder(force = false): Promise<SyncResult> {
+  // Re-read all files once after the import code changes (events and prices are still never duplicated).
+  if (((await db.meta.get('importVersion'))?.value as number | undefined) !== IMPORT_VERSION) force = true;
   const dir = await getFolder();
   if (!dir) throw new Error('No WoW folder chosen yet.');
   if ((await dir.queryPermission({ mode: 'read' })) !== 'granted') throw new Error('Folder access needs to be allowed again.');
@@ -159,11 +167,12 @@ export async function syncFromFolder(force = false): Promise<SyncResult> {
       result.skipped.push(name);
       continue;
     }
-    Object.assign(result, await importFile(name, await file.text()));
+    Object.assign(result, await importFile(name, await file.arrayBuffer()));
     await db.meta.put({ key: `modified:${name}`, value: file.lastModified });
   }
   await db.meta.put({ key: 'lastSync', value: Date.now() });
   await db.meta.put({ key: 'lastMissing', value: result.missing });
+  await db.meta.put({ key: 'importVersion', value: IMPORT_VERSION });
   return result;
 }
 
