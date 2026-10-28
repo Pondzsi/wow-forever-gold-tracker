@@ -138,6 +138,7 @@ export interface Goal {
   name: string;
   targetCopper: number;
   characterIds: number[];
+  note?: string;
 }
 
 export interface Settings {
@@ -210,11 +211,8 @@ export class GoldDB extends Dexie {
       meta: 'key',
       syncLog: 'id',
     });
+    // Characters are not seeded: the addon sync creates them, or you add them in Settings.
     this.on('populate', (tx) => {
-      tx.table('characters').bulkAdd([
-        { name: 'Legally UnDead', className: 'Rogue', professions: ['Skinning', 'Leatherworking', 'Fishing'] },
-        { name: 'Legally Dead', className: 'Mage', professions: ['Tailoring', 'Enchanting', 'Fishing'] },
-      ]);
       tx.table('settings').add(DEFAULT_SETTINGS);
     });
   }

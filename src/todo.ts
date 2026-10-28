@@ -42,7 +42,7 @@ export function buildTodos(input: TodoInput): Todo[] {
       value: 'High',
       title: 'Connect your WoW folder',
       why: 'Without it, everything below has to be typed in by hand.',
-      how: 'Sync page → "Choose WoW folder". One time only.',
+      how: 'Sync page → download and run setup.bat, then "Choose WoW folder" → Documents\\ForeverGoldTracker. One time only.',
     });
   } else if (!input.lastSync || now - input.lastSync > 2 * 86_400_000) {
     todos.push({

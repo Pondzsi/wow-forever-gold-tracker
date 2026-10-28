@@ -174,7 +174,7 @@ async function latestFishing(characterId: number): Promise<number | undefined> {
 
 function StartForm() {
   const characters = useCharacters();
-  const [characterId, setCharacterId] = useState<number | 'all'>(1);
+  const [characterId, setCharacterId] = useState<number | 'all'>(-1);
   const [type, setType] = useState<SessionType>('fishing');
   const [zone, setZone] = useState('');
   const [gold, setGold] = useState('');

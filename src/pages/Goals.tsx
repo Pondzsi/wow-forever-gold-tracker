@@ -7,6 +7,26 @@ import { charName, Money, MoneyField, useCharacters } from '../ui';
 
 const DAY = 86_400_000;
 
+// Common goals. Targets are WoW Classic Era (1.12) reference prices where known.
+// Forever may differ: they are marked as unverified and can be edited.
+const PRESETS: { name: string; target: string; note: string }[] = [
+  {
+    name: 'Riding + first mount (level 40)',
+    target: '100g',
+    note: 'Classic Era reference: 20g riding training + about 80g mount, less with Honored/Exalted reputation. Not verified for Forever.',
+  },
+  {
+    name: 'Epic riding + epic mount (level 60)',
+    target: '1000g',
+    note: 'Classic Era reference: 900g training + about 100g mount, less with reputation. Not verified for Forever.',
+  },
+  { name: 'Class training (next levels)', target: '', note: "Enter what your trainer charges; it rises with level." },
+  { name: 'Profession training (next rank)', target: '', note: 'Enter the trainer price for the next rank and key recipes.' },
+  { name: 'Bag upgrades', target: '', note: 'Check current bag prices on the Prices page (Auctionator) or craft them on the Mage.' },
+  { name: 'Gold reserve', target: '', note: 'A buffer for buying AH price dips and paying deposits.' },
+  { name: 'Key BoE item', target: '', note: 'Rename to the item you want; use its latest AH price as the target.' },
+];
+
 export function Goals() {
   const characters = useCharacters();
   const goals = useLiveQuery(() => db.goals.toArray(), []) ?? [];
@@ -14,6 +34,7 @@ export function Goals() {
 
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
+  const [note, setNote] = useState('');
   const [excluded, setExcluded] = useState<number[]>([]);
 
   const parsed = parseMoney(target);
@@ -22,9 +43,10 @@ export function Goals() {
 
   async function add() {
     if (!valid) return;
-    await db.goals.add({ name: name.trim(), targetCopper: parsed!, characterIds: ids });
+    await db.goals.add({ name: name.trim(), targetCopper: parsed!, characterIds: ids, note: note.trim() || undefined });
     setName('');
     setTarget('');
+    setNote('');
   }
 
   const now = Date.now();
@@ -34,6 +56,23 @@ export function Goals() {
       <h2>Savings goals</h2>
       <div className="card">
         <h3>Add goal</h3>
+        <div className="row" style={{ marginBottom: 10 }}>
+          {PRESETS.map((p) => (
+            <button
+              key={p.name}
+              type="button"
+              className="secondary small"
+              onClick={() => {
+                setName(p.name);
+                setTarget(p.target);
+                setNote(p.note);
+              }}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+        {note && <p className="hint" style={{ marginTop: 0 }}>{note}</p>}
         <form
           className="row"
           onSubmit={(e) => {
@@ -89,6 +128,7 @@ export function Goals() {
                   ✕
                 </button>
               </div>
+              {g.note && <p className="hint" style={{ marginTop: 0 }}>{g.note}</p>}
               <div className="bar" style={{ height: 12 }}>
                 <div style={{ width: `${pct}%` }} />
               </div>

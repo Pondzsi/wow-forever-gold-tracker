@@ -17,7 +17,7 @@ export function Ledger() {
   const characters = useCharacters();
   const entries = useLiveQuery(() => db.ledger.orderBy('time').reverse().toArray(), []) ?? [];
 
-  const [characterId, setCharacterId] = useState<number | 'all'>(1);
+  const [characterId, setCharacterId] = useState<number | 'all'>(-1);
   const [kind, setKind] = useState<'income' | 'expense'>('income');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<LedgerCategory>('auction');

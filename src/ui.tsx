@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { DEFAULT_SETTINGS, db, type Character, type Item, type Settings } from './db';
 import { latestPrices, type PriceMap } from './calc';
 import { formatMoney, parseMoney, splitMoney } from './money';
@@ -130,6 +130,22 @@ export function CharacterSelect({
   allowAll?: boolean;
   label?: string;
 }) {
+  // Pick the first character when the current value is not a known character.
+  const valid = value === 'all' ? allowAll : characters.some((c) => c.id === value);
+  useEffect(() => {
+    if (!valid && characters.length) onChange(allowAll ? 'all' : characters[0].id!);
+  }, [valid, characters, allowAll, onChange]);
+  if (!characters.length) {
+    return (
+      <label className="field">
+        {label}
+        <select disabled>
+          <option>no characters yet</option>
+        </select>
+        <span className="small" style={{ minHeight: 16 }} />
+      </label>
+    );
+  }
   return (
     <label className="field">
       {label}

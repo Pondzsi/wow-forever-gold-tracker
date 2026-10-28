@@ -115,9 +115,16 @@ export function Sync() {
               </button>
             </div>
             <p className="hint">
-              Choose your <b>World of Warcraft</b> folder (or the game version folder inside it). The dashboard only
-              reads <code>GoldTracker.lua</code> and <code>Auctionator.lua</code> from <code>WTF\Account\…\SavedVariables</code>.
-              WoW writes these files when you log out or type <code>/gt sync</code> (a UI reload).
+              First run <b>setup.bat</b> once (download below). Then choose the folder{' '}
+              <code>Documents\ForeverGoldTracker</code>. Setup keeps a copy of the game's save files there, because
+              browsers may not open folders inside Program Files. If WoW is installed elsewhere, you can choose the{' '}
+              <b>World of Warcraft</b> folder directly. WoW saves when you log out or type <code>/gt sync</code>.
+            </p>
+            <p className="hint">
+              <a href="./ForeverGoldTracker-setup.zip" download>
+                Download setup (addon + setup.bat)
+              </a>{' '}
+              · unzip it, double-click <b>setup.bat</b>. Run it again later to update the addon.
             </p>
           </>
         ) : (

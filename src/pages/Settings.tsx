@@ -123,6 +123,8 @@ export function SettingsPage() {
             ))}
           </tbody>
         </table>
+        <AddCharacter />
+        <p className="hint">The addon sync adds your characters by itself. Add them here only if you don't use it.</p>
       </div>
 
       <div className="card">
@@ -190,6 +192,33 @@ function AuctionatorRealm() {
       />
       {realms && <span className="small muted">{realms.length ? realms.join(', ') : 'no realms in file'}</span>}
     </div>
+  );
+}
+
+function AddCharacter() {
+  const [name, setName] = useState('');
+  const [className, setClassName] = useState('');
+  async function add() {
+    if (!name.trim()) return;
+    await db.characters.add({ name: name.trim(), className: className.trim(), professions: [] });
+    setName('');
+    setClassName('');
+  }
+  return (
+    <form
+      className="row"
+      style={{ marginTop: 10 }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        void add();
+      }}
+    >
+      <input placeholder="Character name" value={name} onChange={(e) => setName(e.target.value)} />
+      <input placeholder="Class" value={className} onChange={(e) => setClassName(e.target.value)} />
+      <button type="submit" disabled={!name.trim()}>
+        Add character
+      </button>
+    </form>
   );
 }
 

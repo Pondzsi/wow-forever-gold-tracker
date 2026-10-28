@@ -11,7 +11,7 @@ export function Inventory() {
   const settings = useSettings();
   const rows = useLiveQuery(() => db.inventory.toArray(), []) ?? [];
 
-  const [characterId, setCharacterId] = useState<number | 'all'>(2);
+  const [characterId, setCharacterId] = useState<number | 'all'>(-1);
   const [location, setLocation] = useState<InventoryLocation>('bags');
   const [itemName, setItemName] = useState('');
   const [count, setCount] = useState('1');

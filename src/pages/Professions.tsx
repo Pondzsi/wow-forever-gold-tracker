@@ -10,7 +10,7 @@ export function Professions() {
   const characters = useCharacters();
   const snaps = useLiveQuery(() => db.professionSnapshots.orderBy('time').toArray(), []) ?? [];
 
-  const [characterId, setCharacterId] = useState<number | 'all'>(1);
+  const [characterId, setCharacterId] = useState<number | 'all'>(-1);
   const [profession, setProfession] = useState('');
   const [skill, setSkill] = useState('');
   const [maxSkill, setMaxSkill] = useState('');

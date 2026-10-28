@@ -22,6 +22,15 @@ export function Overview() {
   return (
     <>
       <h2>Overview</h2>
+      {characters.length === 0 && (
+        <div className="card">
+          <h3>Welcome</h3>
+          <p style={{ margin: 0 }}>
+            No characters yet. Run <b>setup.bat</b> once (see <a href="#/sync">Sync &amp; to-do</a>), log in to WoW, then
+            log out or type <code>/gt sync</code>. Your characters appear here by themselves.
+          </p>
+        </div>
+      )}
       <div className="grid">
         <div className="card">
           <div className="muted small">Total gold</div>

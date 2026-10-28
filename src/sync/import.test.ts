@@ -30,7 +30,8 @@ describe('GoldTracker import', () => {
     expect(addon?.newEvents).toBe(6);
 
     const mage = (await db.characters.toArray()).find((c) => c.name === 'Legally Dead')!;
-    expect(mage.professions).toEqual(expect.arrayContaining(['Tailoring', 'Enchanting', 'Fishing']));
+    expect(mage.professions).toEqual(['Tailoring', 'Fishing']);
+    expect(mage.className).toBe('Mage');
     expect((await db.characters.toArray()).map((c) => c.name)).toContain('Newalt');
 
     const ledger = await db.ledger.toArray();
