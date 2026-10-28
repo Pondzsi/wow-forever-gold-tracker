@@ -38,4 +38,25 @@ GoldTrackerDB = {
 	["recipes"] = {
 		["Tailoring:4245"] = { ["p"] = "Tailoring", ["out"] = 4245, ["n"] = 1, ["r"] = { [4305] = 3, [2589] = 1 } },
 	},
+	["lastError"] = "LOOT_READY: attempt to compare a secret value",
+	["health"] = {
+		["t"] = 1793003700,
+		["client"] = 16001,
+		["build"] = "12.0.1.65000",
+		["addonVersion"] = "0.2.0",
+		["lastError"] = "LOOT_READY: attempt to compare a secret value",
+		["checks"] = {
+			["zone"] = { ["ok"] = true, ["detail"] = "Alterac Mountains" },
+			["gold"] = { ["ok"] = true, ["detail"] = "gold is readable" },
+			["bags"] = { ["ok"] = true, ["detail"] = "backpack has 16 slots, item in bag 0 slot 1 is readable" },
+			["itemInfo"] = { ["ok"] = true, ["detail"] = "name, quality, sell price and bind type read for Hearthstone" },
+			["bound"] = { ["ok"] = true, ["detail"] = "isBound is in the bag slot info" },
+			["professions"] = { ["ok"] = true, ["detail"] = "Fishing, Tailoring" },
+			["recipes"] = { ["ok"] = true, ["detail"] = "functions present; open a profession window and run /gt check again to test a real read" },
+			["mail"] = { ["ok"] = true, ["detail"] = "mail and AH invoice functions present" },
+			["loot"] = { ["ok"] = false, ["detail"] = "missing: C_Item.GetItemIDByGUID" },
+			["itemUseHook"] = { ["ok"] = true, ["detail"] = "C_Container.UseContainerItem can be hooked" },
+			["timers"] = { ["ok"] = true, ["detail"] = "C_Timer.After and NewTicker present" },
+		},
+	},
 }

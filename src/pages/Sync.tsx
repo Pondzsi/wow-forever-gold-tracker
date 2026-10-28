@@ -11,6 +11,7 @@ import {
   syncFromFolder,
   type SyncResult,
 } from '../sync/folder';
+import { HEALTH_CHECKS, healthLabel, type AddonHealth } from '../sync/importAddon';
 import { COVERAGE, type Value } from '../todo';
 import { fmtAge } from '../ui';
 import { useTodos } from '../useTodos';
@@ -243,6 +244,8 @@ export function Sync() {
         </>
       )}
 
+      <AddonHealthCard />
+
       <details className="card">
         <summary>
           <h3 style={{ display: 'inline' }}>What fills in by itself</h3>
@@ -270,11 +273,76 @@ export function Sync() {
           </tbody>
         </table></div>
         <p className="hint">
-          Requires the Gold Tracker addon and Auctionator. The addon's game calls are not verified on Forever yet; check
-          this page after your first session at launch.
+          Requires the Gold Tracker addon and Auctionator. The addon's game calls are not verified on Forever yet; the
+          Addon health card above shows what works in your game version.
         </p>
       </details>
     </>
+  );
+}
+
+/** What the addon could read in this game version, from its last /gt check. */
+function AddonHealthCard() {
+  const health = useLiveQuery(
+    async () => ((await db.meta.get('addonHealth'))?.value as AddonHealth | undefined) ?? null,
+    [],
+  );
+  if (health === undefined) return null; // still loading
+  if (health === null) {
+    return (
+      <div className="card">
+        <h3>Addon health</h3>
+        <p className="muted" style={{ margin: 0 }}>
+          No check yet. Type <code>/gt check</code> in game, then <code>/reload</code>.
+        </p>
+      </div>
+    );
+  }
+  const okCount = health.checks.filter((c) => c.ok).length;
+  const feeds = (name: string) => HEALTH_CHECKS.find((c) => c.name === name)?.feeds;
+  return (
+    <div className="card">
+      <h3>Addon health</h3>
+      <div className="row small" style={{ alignItems: 'center' }}>
+        <span className={okCount === health.checks.length ? 'good' : 'bad'}>
+          {okCount} of {health.checks.length} OK
+        </span>
+        <span className="muted">
+          checked {fmtAge(health.time)} · client {health.client ?? '?'}
+          {health.build ? ` (${health.build})` : ''} · addon {health.addonVersion ?? '?'}
+        </span>
+      </div>
+      <div className="table-wrap"><table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>Status</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {health.checks.map((c) => (
+            <tr key={c.name}>
+              <td>
+                <div>{healthLabel(c.name)}</div>
+                {feeds(c.name) && <div className="small muted">{feeds(c.name)}</div>}
+              </td>
+              <td>
+                <span className={`badge ${c.ok ? 'good' : 'bad'}`}>{c.ok ? 'OK' : 'Problem'}</span>
+              </td>
+              <td className="small">{c.detail}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table></div>
+      <p className="hint">
+        Addon's last error: {health.lastError ? <span className="bad">{health.lastError}</span> : 'none'}
+      </p>
+      <p className="hint">
+        The addon checks itself 10 seconds after each login. Type <code>/gt check</code> to run it again (for example
+        with a profession window open), then <code>/reload</code>.
+      </p>
+    </div>
   );
 }
 

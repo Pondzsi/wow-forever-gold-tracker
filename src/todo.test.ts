@@ -80,6 +80,31 @@ describe('buildTodos', () => {
     expect(t.items).toEqual(['Silk Cloth', 'Small Silk Pack']);
   });
 
+  it('flags failed addon health checks as High', () => {
+    const addonHealth = {
+      time: 0,
+      checks: [
+        { name: 'gold', ok: true, detail: 'gold is readable' },
+        { name: 'loot', ok: false, detail: 'missing: GetLootSourceInfo' },
+        { name: 'bound', ok: false, detail: 'C_Item.IsBound gave no answer' },
+      ],
+    };
+    const t = buildTodos({ ...base, addonHealth }).find((x) => x.title.startsWith("Addon can't read"))!;
+    expect(t).toMatchObject({ value: 'High', title: "Addon can't read loot, soulbound status in this game version" });
+    expect(t.items).toEqual(['loot: missing: GetLootSourceInfo', 'soulbound status: C_Item.IsBound gave no answer']);
+
+    const allOk = { ...addonHealth, checks: [addonHealth.checks[0]] };
+    expect(buildTodos({ ...base, addonHealth: allOk }).some((x) => x.title.includes('Addon'))).toBe(false);
+  });
+
+  it('asks for a health check only after a sync without one', () => {
+    const missing = buildTodos({ ...base, addonHealth: null }).find((x) => x.title === 'No addon health check yet');
+    expect(missing?.value).toBe('Medium');
+    expect(buildTodos({ ...base, addonHealth: null, lastSync: null }).some((x) => x.title.includes('health'))).toBe(false);
+    // Callers that don't load health data (undefined) get no health to-do.
+    expect(buildTodos(base).some((x) => x.title.includes('health'))).toBe(false);
+  });
+
   it('puts optional fishing details last', () => {
     const t = buildTodos({
       ...base,

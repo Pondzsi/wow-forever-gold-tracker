@@ -28,7 +28,11 @@ Design and scope: [docs/v1-spec.md](docs/v1-spec.md).
   it syncs by itself.
 - **Sync & to-do** lists what still needs you, ranked High / Medium / Low.
 
-Other commands: `/gt status`, `/gt` (help).
+- **Launch day:** type `/gt check`, then `/reload`. The addon tests every game call it uses and the
+  **Addon health** card on **Sync & to-do** shows what works in this game version. It also checks itself
+  silently 10 seconds after each login.
+
+Other commands: `/gt check` (health check), `/gt status`, `/gt` (help).
 
 ## Your data
 
