@@ -4,6 +4,10 @@ A local dashboard for gold, prices, crafting profit, professions and farming/fis
 Most data comes from the game by itself: the **Gold Tracker** addon (in this repo) and **Auctionator**.
 Design and scope: [docs/v1-spec.md](docs/v1-spec.md).
 
+**Overview page to share:** https://pondzsi.github.io/wow-forever-gold-tracker/demo/
+
+![Forever Gold Tracker overview](docs/media/forever-gold-tracker-demo.png)
+
 ## Setup (once)
 
 1. **Auctionator** (required, for AH prices): install it from CurseForge or Wago.

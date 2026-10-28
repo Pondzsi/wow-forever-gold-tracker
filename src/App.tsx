@@ -185,7 +185,11 @@ function Shell() {
         <div className="brand">Forever Gold</div>
         <VersionSelect />
         <NavLinks path={path} high={high} />
-        <div className="nav-footer">Fan-made tool. Not affiliated with Blizzard Entertainment or Wowhead.</div>
+        <div className="nav-footer">
+          <a href="./demo/">What is this? (overview)</a>
+          <br />
+          Fan-made tool. Not affiliated with Blizzard Entertainment or Wowhead.
+        </div>
       </nav>
 
       <main id="main" tabIndex={-1}>
@@ -232,7 +236,11 @@ function Shell() {
             </div>
             <NavLinks path={path} high={high} onPick={() => setMoreOpen(false)} />
             <VersionSelect />
-            <div className="nav-footer">Fan-made tool. Not affiliated with Blizzard Entertainment or Wowhead.</div>
+            <div className="nav-footer">
+          <a href="./demo/">What is this? (overview)</a>
+          <br />
+          Fan-made tool. Not affiliated with Blizzard Entertainment or Wowhead.
+        </div>
           </div>
         </>
       )}
