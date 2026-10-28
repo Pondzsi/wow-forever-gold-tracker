@@ -178,6 +178,18 @@ Goal: no manual forms where the game can supply the data.
 - **Sync & to-do page:** lists what is still manual, ranked High / Medium / Low, plus a table of what is
   automatic.
 
+## 9c. Addon health check (addon 0.2.0)
+
+- `/gt check` tests each data source (gold, bags, item info, bound status, professions, recipes, mail,
+  loot, item-use hook, zone, timers). It only reads. Results go to `GoldTrackerDB.health`
+  (`t`, `client`, `build`, `addonVersion`, `lastError`, `checks[name] = { ok, detail }`) and a one-line
+  summary is printed. The same check runs silently 10 seconds after each login.
+- The dashboard stores the latest result in `meta.addonHealth` (per game version) and shows it in the
+  **Addon health** card on the Sync page. A failed check is a High to-do; a sync without any health data
+  is a Medium to-do.
+- Recipes can only be read with a profession window open, so that check passes on the functions alone
+  and asks for a second `/gt check` with the window open.
+
 ## 10. Milestones
 
 1. **M1 — Manual dashboard (before launch).**

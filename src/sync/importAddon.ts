@@ -43,6 +43,57 @@ export function cleanItemName(raw: string): string {
   return tier ? `${name} (tier ${tier})` : name;
 }
 
+/** The addon's /gt check result, saved in db.meta under 'addonHealth'. */
+export interface AddonHealth {
+  time: number; // ms
+  client?: number; // interface number, e.g. 120100
+  build?: string; // e.g. "12.0.1.65000"
+  addonVersion?: string;
+  checks: { name: string; ok: boolean; detail: string }[];
+  lastError?: string;
+}
+
+/** The checks the addon runs, in display order, with what each one feeds. */
+export const HEALTH_CHECKS: { name: string; label: string; feeds: string }[] = [
+  { name: 'gold', label: 'gold', feeds: 'Gold per character, income and expenses' },
+  { name: 'bags', label: 'bags', feeds: 'Bags and bank' },
+  { name: 'itemInfo', label: 'item info', feeds: 'Item names, quality, vendor prices, bind type' },
+  { name: 'bound', label: 'soulbound status', feeds: 'Leaving unsellable items out of the to-do and sell list' },
+  { name: 'professions', label: 'professions', feeds: 'Profession skill levels, fishing skill' },
+  { name: 'recipes', label: 'recipes', feeds: 'Recipes and materials' },
+  { name: 'mail', label: 'AH mail', feeds: 'Your AH sales, cut and deposit' },
+  { name: 'loot', label: 'loot', feeds: 'Fishing sessions, trunk and fish contents' },
+  { name: 'itemUseHook', label: 'opened containers', feeds: 'Which container a loot window came from' },
+  { name: 'zone', label: 'zone', feeds: 'Session zone' },
+  { name: 'timers', label: 'timers', feeds: 'Bag snapshots and fishing auto-stop' },
+];
+
+export function healthLabel(name: string): string {
+  return HEALTH_CHECKS.find((c) => c.name === name)?.label ?? name;
+}
+
+/** Reads GoldTrackerDB.health. Known checks come first, in display order. */
+export function parseHealth(raw: unknown): AddonHealth | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const h = raw as Obj;
+  const checks = (h.checks && typeof h.checks === 'object' ? h.checks : {}) as Record<string, Obj>;
+  const order = (name: string) => {
+    const i = HEALTH_CHECKS.findIndex((c) => c.name === name);
+    return i < 0 ? HEALTH_CHECKS.length : i;
+  };
+  return {
+    time: ms(h.t),
+    client: num(h.client),
+    build: str(h.build),
+    addonVersion: str(h.addonVersion),
+    lastError: str(h.lastError),
+    checks: Object.entries(checks)
+      .filter(([, c]) => c && typeof c === 'object')
+      .map(([name, c]) => ({ name, ok: c.ok === true, detail: str(c.detail) ?? '' }))
+      .sort((a, b) => order(a.name) - order(b.name) || a.name.localeCompare(b.name)),
+  };
+}
+
 const CLASS_NAMES: Record<string, string> = {
   WARRIOR: 'Warrior', PALADIN: 'Paladin', HUNTER: 'Hunter', ROGUE: 'Rogue', PRIEST: 'Priest',
   SHAMAN: 'Shaman', MAGE: 'Mage', WARLOCK: 'Warlock', DRUID: 'Druid', DEATHKNIGHT: 'Death Knight',
@@ -317,6 +368,10 @@ export async function importGoldTracker(saved: Record<string, LuaValue>): Promis
         await db.recipes.update(current.id!, { ...recipe, patternCost: current.patternCost });
       }
     }
+
+    // ---- Health check from /gt check (or the automatic one after login).
+    const health = parseHealth(root.health);
+    if (health) await db.meta.put({ key: 'addonHealth', value: health });
 
     const lastError = str(root.lastError);
     if (lastError) report.warnings.push(`Addon reported an error: ${lastError}`);

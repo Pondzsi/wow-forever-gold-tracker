@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '../db';
 import { importFile } from './folder';
+import { HEALTH_CHECKS, type AddonHealth } from './importAddon';
 import { auctionatorDay0 } from './importAuctionator';
 // Written to match what addon/GoldTracker/GoldTracker.lua saves.
 import goldTrackerFile from './fixtures/GoldTracker.sample.lua?raw';
@@ -65,6 +66,31 @@ describe('GoldTracker import', () => {
     const [recipe] = await db.recipes.toArray();
     expect(recipe.source).toBe('addon');
     expect(recipe.reagents).toHaveLength(2);
+  });
+
+  it('saves the addon health check in display order', async () => {
+    expect(await db.meta.get('addonHealth')).toBeUndefined();
+    const { addon } = await importFile('GoldTracker.lua', goldTrackerFile);
+    expect(addon?.warnings).toContain('Addon reported an error: LOOT_READY: attempt to compare a secret value');
+
+    const health = (await db.meta.get('addonHealth'))?.value as AddonHealth;
+    expect(health).toMatchObject({
+      time: 1793003700 * 1000,
+      client: 16001,
+      build: '12.0.1.65000',
+      addonVersion: '0.2.0',
+      lastError: 'LOOT_READY: attempt to compare a secret value',
+    });
+    expect(health.checks.map((c) => c.name)).toEqual(HEALTH_CHECKS.map((c) => c.name));
+    expect(health.checks.filter((c) => !c.ok)).toEqual([
+      { name: 'loot', ok: false, detail: 'missing: C_Item.GetItemIDByGUID' },
+    ]);
+  });
+
+  it('keeps the last health check when a file has none', async () => {
+    await importFile('GoldTracker.lua', goldTrackerFile);
+    await importFile('GoldTracker.lua', goldTrackerFile.replace(/\["health"\][\s\S]*$/, '}'));
+    expect(((await db.meta.get('addonHealth'))?.value as AddonHealth).addonVersion).toBe('0.2.0');
   });
 
   it('does not import the same events twice', async () => {

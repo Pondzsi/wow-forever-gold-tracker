@@ -3,6 +3,7 @@
 import { evaluateRecipe, isStale, type PriceMap } from './calc';
 import { canSellOnAH, type InventoryRow, type Item, type Recipe, type Session, type Settings } from './db';
 import { formatMoney } from './money';
+import { healthLabel, type AddonHealth } from './sync/importAddon';
 
 export type Value = 'High' | 'Medium' | 'Low';
 
@@ -24,6 +25,8 @@ export interface TodoInput {
   goals: number;
   lastSync: number | null;
   folderConnected: boolean;
+  /** The addon's last /gt check result; null when the addon has never sent one. */
+  addonHealth?: AddonHealth | null;
   now?: number;
 }
 
@@ -50,6 +53,25 @@ export function buildTodos(input: TodoInput): Todo[] {
       title: 'No sync for more than 2 days',
       why: 'Gold, inventory and prices on this dashboard are getting old.',
       how: 'Log out or type /gt sync in game, then switch back to this tab.',
+    });
+  }
+
+  // Addon health: data the addon can't read in this game version.
+  const failed = input.addonHealth?.checks.filter((c) => !c.ok) ?? [];
+  if (failed.length) {
+    todos.push({
+      value: 'High',
+      title: `Addon can't read ${failed.map((c) => healthLabel(c.name)).join(', ')} in this game version`,
+      why: 'That data stays empty or wrong on the dashboard until the addon is fixed.',
+      how: 'Sync page → Addon health shows the details. Run /gt check in game after an addon update, then /reload.',
+      items: failed.map((c) => `${healthLabel(c.name)}: ${c.detail}`),
+    });
+  } else if (input.addonHealth === null && input.lastSync) {
+    todos.push({
+      value: 'Medium',
+      title: 'No addon health check yet',
+      why: 'You can\'t tell which data the addon records in this game version.',
+      how: 'Update the Gold Tracker addon to 0.2.0 or later. Type /gt check in game, then /reload.',
     });
   }
 
