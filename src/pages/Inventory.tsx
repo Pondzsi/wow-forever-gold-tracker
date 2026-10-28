@@ -11,8 +11,10 @@ import {
   type Item,
 } from '../db';
 import { formatMoney } from '../money';
-import { CharacterSelect, charName, fmtAge, ItemField, Money, useCharacters, useItems, usePriceMap, useSettings, EmptyState, Skeleton } from '../ui';
+import { CharacterSelect, charName, fmtAge, ItemField, Money, useCharacters, useItems, usePriceMap, useSettings, EmptyState, Skeleton, Disclosure } from '../ui';
 import { ItemLink, qualityClass } from '../wowhead';
+
+import { useSort } from '../sort';
 
 export function Inventory() {
   const characters = useCharacters();
@@ -72,6 +74,17 @@ export function Inventory() {
   const list = [...grouped.values()].sort((a, b) =>
     (items.byId.get(a.itemId)?.name ?? '').localeCompare(items.byId.get(b.itemId)?.name ?? ''),
   );
+  const invSort = useSort(
+    list,
+    {
+      item: (g) => items.byId.get(g.itemId)?.name ?? '',
+      count: (g) => g.count,
+      price: (g) => prices.get(g.itemId)?.copper,
+      age: (g) => prices.get(g.itemId)?.time,
+      value: (g) => (prices.get(g.itemId) ? prices.get(g.itemId)!.copper * g.count : undefined),
+    },
+    { key: 'value', desc: true },
+  );
   let total = 0;
   let unpriced = 0;
   for (const g of list) {
@@ -83,8 +96,7 @@ export function Inventory() {
   return (
     <>
       <h2>Inventory</h2>
-      <div className="card">
-        <h3>Set item count</h3>
+      <Disclosure title="Set item count by hand" defaultOpen={rowsQ !== undefined && rowsQ.length === 0}>
         <form
           className="row"
           onSubmit={(e) => {
@@ -112,7 +124,7 @@ export function Inventory() {
           </button>
         </form>
         <p className="hint">This sets the total count at that location. Count 0 removes the item.</p>
-      </div>
+      </Disclosure>
 
       <div className="card">
         <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -148,16 +160,16 @@ export function Inventory() {
           <div className="table-wrap"><table>
             <thead>
               <tr>
-                <th>Item</th>
+                <invSort.Th k="item" label="Item" />
                 <th>Where</th>
-                <th className="num">Count</th>
-                <th className="num">Unit price</th>
-                <th>Price age</th>
-                <th className="num">Value</th>
+                <invSort.Th k="count" label="Count" num />
+                <invSort.Th k="price" label="Unit price" num />
+                <invSort.Th k="age" label="Price date" num />
+                <invSort.Th k="value" label="Value" num />
               </tr>
             </thead>
             <tbody>
-              {list.map((g) => {
+              {invSort.sorted.map((g) => {
                 const p = prices.get(g.itemId);
                 return (
                   <tr key={g.itemId}>

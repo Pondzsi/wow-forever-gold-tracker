@@ -90,144 +90,163 @@ export function Sync() {
       return out.join(' · ');
     });
 
+  const gameCard = (
+    <div className="card">
+      <h3>Game data</h3>
+      {folderAccessSupported() ? (
+        <>
+          {allDone && !showSteps ? (
+            <div className="row" style={{ alignItems: 'center' }}>
+              <span className="good">✓ Connected to {folderName}</span>
+              <span className="muted small">
+                syncs when you switch to this tab{lastSync ? ` · last sync ${fmtAge(lastSync)}` : ''}
+              </span>
+              <button onClick={() => void syncNow()} disabled={busy}>
+                Sync now
+              </button>
+              <button className="link" style={{ color: 'var(--accent)' }} onClick={() => setShowSteps(true)}>
+                setup steps
+              </button>
+            </div>
+          ) : (
+            <>
+              <ol className="steps">
+                <Step n={1} done={atr.found} current={current === 1} title="Install Auctionator in WoW">
+                  From CurseForge or Wago. It provides the Auction House prices.
+                  {gt.hasData && !atr.found
+                    ? ' Auctionator.lua was not found yet: install it, log in once, then /gt sync.'
+                    : ' This turns green after step 4.'}
+                </Step>
+                <Step n={2} done={gt.found} current={current === 2} title="Download the setup and run setup.bat">
+                  <a className="button" href="./ForeverGoldTracker-setup.zip" download>
+                    Download setup
+                  </a>{' '}
+                  Unzip it and double-click <b>setup.bat</b>. Press Enter to track <code>_forever_</code> (or pick
+                  another game version). It installs the addon and creates <code>Documents\ForeverGoldTracker</code>.
+                </Step>
+                <Step n={3} done={connected} current={current === 3} title="Connect the folder">
+                  {permission === 'prompt' ? (
+                    <button onClick={() => void syncNow()} disabled={busy}>
+                      Allow access again
+                    </button>
+                  ) : (
+                    <button onClick={() => void connect()} disabled={busy}>
+                      {connected ? 'Change folder…' : 'Choose folder…'}
+                    </button>
+                  )}{' '}
+                  In the window: <b>Documents</b> → <b>ForeverGoldTracker</b> → <b>Select Folder</b>, then{' '}
+                  <b>Allow on every visit</b>.
+                </Step>
+                <Step n={4} done={gt.hasData} current={current === 4} title="Log in to WoW, then save">
+                  Play as usual. Type <code>/gt sync</code> in chat (or log out) to save. Switch back to this tab:
+                  your characters appear by themselves.
+                </Step>
+                <Step n={5} done={atr.hasData} current={current === 5} title="Scan the Auction House">
+                  At the AH, open the Auctionator tab and run a full scan. Then <code>/gt sync</code> again.
+                </Step>
+              </ol>
+              <div className="row">
+                {connected && (
+                  <button className="secondary" onClick={() => void syncNow()} disabled={busy}>
+                    Sync now
+                  </button>
+                )}
+                {allDone && (
+                  <button className="link" style={{ color: 'var(--accent)' }} onClick={() => setShowSteps(false)}>
+                    hide steps
+                  </button>
+                )}
+                <button className="link" style={{ color: 'var(--muted)' }} onClick={() => fileRef.current?.click()}>
+                  import files by hand instead…
+                </button>
+              </div>
+              <p className="hint">
+                Why a copy in Documents: browsers can't open folders inside Program Files, where WoW is usually
+                installed. setup.bat's background copier keeps the copy up to date.
+              </p>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="warn" style={{ marginTop: 0 }}>
+            This browser can't read folders. Use Chrome or Edge for automatic sync, or import the files by hand.
+          </p>
+          <button onClick={() => fileRef.current?.click()} disabled={busy}>
+            Import GoldTracker.lua / Auctionator.lua…
+          </button>
+        </>
+      )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".lua"
+        multiple
+        hidden
+        onChange={(e) => {
+          if (e.target.files?.length) void importFiles(e.target.files);
+          e.target.value = '';
+        }}
+      />
+      {message && <p className="hint">{message}</p>}
+    </div>
+  );
+
+  const todoCard = (
+    <div className="card">
+      <h3>What still needs you</h3>
+      {todos.length === 0 ? (
+        <p className="good">Nothing. Everything is filled in automatically.</p>
+      ) : (
+        <div className="table-wrap"><table>
+          <thead>
+            <tr>
+              <th>Value</th>
+              <th>What</th>
+              <th>How</th>
+            </tr>
+          </thead>
+          <tbody>
+            {todos.map((t) => (
+              <tr key={t.title}>
+                <td>
+                  <ValueBadge value={t.value} />
+                </td>
+                <td>
+                  <div>{t.title}</div>
+                  <div className="small muted">{t.why}</div>
+                  {t.items && <div className="small">{t.items.join(', ')}</div>}
+                </td>
+                <td className="small">{t.how}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <h2>Sync &amp; to-do</h2>
 
-      <div className="card">
-        <h3>Game data</h3>
-        {folderAccessSupported() ? (
-          <>
-            {allDone && !showSteps ? (
-              <div className="row" style={{ alignItems: 'center' }}>
-                <span className="good">✓ Connected to {folderName}</span>
-                <span className="muted small">
-                  syncs when you switch to this tab{lastSync ? ` · last sync ${fmtAge(lastSync)}` : ''}
-                </span>
-                <button onClick={() => void syncNow()} disabled={busy}>
-                  Sync now
-                </button>
-                <button className="link" style={{ color: 'var(--accent)' }} onClick={() => setShowSteps(true)}>
-                  setup steps
-                </button>
-              </div>
-            ) : (
-              <>
-                <ol className="steps">
-                  <Step n={1} done={atr.found} current={current === 1} title="Install Auctionator in WoW">
-                    From CurseForge or Wago. It provides the Auction House prices.
-                    {gt.hasData && !atr.found
-                      ? ' Auctionator.lua was not found yet: install it, log in once, then /gt sync.'
-                      : ' This turns green after step 4.'}
-                  </Step>
-                  <Step n={2} done={gt.found} current={current === 2} title="Download the setup and run setup.bat">
-                    <a className="button" href="./ForeverGoldTracker-setup.zip" download>
-                      Download setup
-                    </a>{' '}
-                    Unzip it and double-click <b>setup.bat</b>. Press Enter to track <code>_forever_</code> (or pick
-                    another game version). It installs the addon and creates <code>Documents\ForeverGoldTracker</code>.
-                  </Step>
-                  <Step n={3} done={connected} current={current === 3} title="Connect the folder">
-                    {permission === 'prompt' ? (
-                      <button onClick={() => void syncNow()} disabled={busy}>
-                        Allow access again
-                      </button>
-                    ) : (
-                      <button onClick={() => void connect()} disabled={busy}>
-                        {connected ? 'Change folder…' : 'Choose folder…'}
-                      </button>
-                    )}{' '}
-                    In the window: <b>Documents</b> → <b>ForeverGoldTracker</b> → <b>Select Folder</b>, then{' '}
-                    <b>Allow on every visit</b>.
-                  </Step>
-                  <Step n={4} done={gt.hasData} current={current === 4} title="Log in to WoW, then save">
-                    Play as usual. Type <code>/gt sync</code> in chat (or log out) to save. Switch back to this tab:
-                    your characters appear by themselves.
-                  </Step>
-                  <Step n={5} done={atr.hasData} current={current === 5} title="Scan the Auction House">
-                    At the AH, open the Auctionator tab and run a full scan. Then <code>/gt sync</code> again.
-                  </Step>
-                </ol>
-                <div className="row">
-                  {connected && (
-                    <button className="secondary" onClick={() => void syncNow()} disabled={busy}>
-                      Sync now
-                    </button>
-                  )}
-                  {allDone && (
-                    <button className="link" style={{ color: 'var(--accent)' }} onClick={() => setShowSteps(false)}>
-                      hide steps
-                    </button>
-                  )}
-                  <button className="link" style={{ color: 'var(--muted)' }} onClick={() => fileRef.current?.click()}>
-                    import files by hand instead…
-                  </button>
-                </div>
-                <p className="hint">
-                  Why a copy in Documents: browsers can't open folders inside Program Files, where WoW is usually
-                  installed. setup.bat's background copier keeps the copy up to date.
-                </p>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <p className="warn" style={{ marginTop: 0 }}>
-              This browser can't read folders. Use Chrome or Edge for automatic sync, or import the files by hand.
-            </p>
-            <button onClick={() => fileRef.current?.click()} disabled={busy}>
-              Import GoldTracker.lua / Auctionator.lua…
-            </button>
-          </>
-        )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".lua"
-          multiple
-          hidden
-          onChange={(e) => {
-            if (e.target.files?.length) void importFiles(e.target.files);
-            e.target.value = '';
-          }}
-        />
-        {message && <p className="hint">{message}</p>}
-      </div>
+      {/* Once setup is done, what still needs you comes first. */}
+      {allDone ? (
+        <>
+          {todoCard}
+          {gameCard}
+        </>
+      ) : (
+        <>
+          {gameCard}
+          {todoCard}
+        </>
+      )}
 
-      <div className="card">
-        <h3>What still needs you</h3>
-        {todos.length === 0 ? (
-          <p className="good">Nothing. Everything is filled in automatically.</p>
-        ) : (
-          <div className="table-wrap"><table>
-            <thead>
-              <tr>
-                <th>Value</th>
-                <th>What</th>
-                <th>How</th>
-              </tr>
-            </thead>
-            <tbody>
-              {todos.map((t) => (
-                <tr key={t.title}>
-                  <td>
-                    <ValueBadge value={t.value} />
-                  </td>
-                  <td>
-                    <div>{t.title}</div>
-                    <div className="small muted">{t.why}</div>
-                    {t.items && <div className="small">{t.items.join(', ')}</div>}
-                  </td>
-                  <td className="small">{t.how}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        )}
-      </div>
-
-      <div className="card">
-        <h3>What fills in by itself</h3>
+      <details className="card">
+        <summary>
+          <h3 style={{ display: 'inline' }}>What fills in by itself</h3>
+        </summary>
         <div className="table-wrap"><table>
           <thead>
             <tr>
@@ -254,7 +273,7 @@ export function Sync() {
           Requires the Gold Tracker addon and Auctionator. The addon's game calls are not verified on Forever yet; check
           this page after your first session at launch.
         </p>
-      </div>
+      </details>
     </>
   );
 }

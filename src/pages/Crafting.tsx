@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { evaluateRecipe } from '../calc';
 import { db, getOrCreateItem, type Recipe } from '../db';
 import { formatMoney, parseMoney } from '../money';
-import { ItemField, Money, MoneyField, useItems, usePriceMap, useSettings, EmptyState, Skeleton } from '../ui';
+import { ItemField, Money, MoneyField, useItems, usePriceMap, useSettings, EmptyState, Skeleton, Disclosure } from '../ui';
 import { ItemLink } from '../wowhead';
 import { deleteWithUndo, useToast } from '../toast';
 
@@ -79,8 +79,7 @@ export function Crafting() {
   return (
     <>
       <h2>Crafting</h2>
-      <div className="card">
-        <h3>{editId !== null ? 'Edit recipe' : 'Add recipe'}</h3>
+      <Disclosure title={editId !== null ? 'Edit recipe' : 'Add a recipe by hand'} defaultOpen={recipesQ !== undefined && recipesQ.length === 0} forceOpen={editId !== null}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -169,7 +168,7 @@ export function Crafting() {
             : 'Deposits are treated as refunded on sale.'}{' '}
           Change both in Settings.
         </p>
-      </div>
+      </Disclosure>
 
       <div className="card">
         <div className="row" style={{ justifyContent: 'space-between' }}>

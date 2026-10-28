@@ -1,4 +1,4 @@
-import type { ContainerOpen, GoldSnapshot, Item, Price, Recipe, Session, SessionItem } from './db';
+import { canSellOnAH, type ContainerOpen, type GoldSnapshot, type Item, type Price, type Recipe, type Session, type SessionItem } from './db';
 
 export type PriceMap = Map<number, Price>;
 
@@ -233,4 +233,77 @@ export function goldChangeSince(
     any = true;
   }
   return any ? change : null;
+}
+
+// ---------- Sell / vendor / keep ----------
+
+export type Decision = 'Sell on AH' | 'Vendor' | 'Keep' | 'Check AH';
+
+export interface HoldingDecision {
+  itemId: number;
+  count: number;
+  decision: Decision;
+  reason: string;
+  ahNet: number | null; // whole stack on the AH, after fees
+  vendor: number | null; // whole stack at a vendor
+  best: number; // value of the chosen option (0 for Keep / Check AH without vendor price)
+  stale: boolean;
+}
+
+/**
+ * One recommendation per held item. Order of rules:
+ * 1. Materials of a recipe whose best option is crafting: keep them.
+ * 2. Items that can't go on the AH (bound, quest, warbound): vendor if a vendor pays, else keep.
+ * 3. With an AH price: vendor when the vendor pays at least the AH net, else sell on the AH.
+ * 4. No AH price: check the AH (if a vendor would pay) or keep.
+ */
+export function decideHoldings(
+  held: Map<number, number>,
+  items: Map<number, Item>,
+  prices: PriceMap,
+  fees: Fees,
+  recipes: Recipe[],
+  staleDays: number,
+  now = Date.now(),
+): HoldingDecision[] {
+  const craftMats = new Map<number, number>(); // material -> product it is worth keeping for
+  for (const r of recipes) {
+    if (evaluateRecipe(r, prices, items, fees).best?.verdict === 'Craft') {
+      for (const m of r.reagents) craftMats.set(m.itemId, r.productItemId);
+    }
+  }
+
+  const out: HoldingDecision[] = [];
+  for (const [itemId, count] of held) {
+    const item = items.get(itemId);
+    const price = prices.get(itemId);
+    const vendor = item?.vendorPrice ? item.vendorPrice * count : null;
+    const ahNetTotal = price ? ahNet(price.copper, count, fees, item?.depositPerUnit) : null;
+    const stale = !!price && isStale(price, staleDays, now);
+    const base = { itemId, count, ahNet: ahNetTotal, vendor, stale };
+
+    const product = craftMats.get(itemId);
+    if (product !== undefined) {
+      out.push({ ...base, decision: 'Keep', reason: `Material for ${items.get(product)?.name ?? 'a recipe'}: crafting pays more`, best: 0 });
+    } else if (!canSellOnAH(item)) {
+      out.push(
+        vendor
+          ? { ...base, decision: 'Vendor', reason: "Can't be sold on the AH", best: vendor }
+          : { ...base, decision: 'Keep', reason: "Can't be sold on the AH or to a vendor", best: 0 },
+      );
+    } else if (ahNetTotal !== null) {
+      out.push(
+        vendor !== null && vendor >= ahNetTotal
+          ? { ...base, decision: 'Vendor', reason: 'Vendor pays at least the AH price after fees', best: vendor }
+          : { ...base, decision: 'Sell on AH', reason: stale ? 'AH price is old: check it first' : 'AH pays more than a vendor', best: ahNetTotal },
+      );
+    } else {
+      out.push(
+        vendor
+          ? { ...base, decision: 'Check AH', reason: 'No AH price yet: search it with Auctionator', best: vendor }
+          : { ...base, decision: 'Keep', reason: 'No AH price and no vendor value', best: 0 },
+      );
+    }
+  }
+  return out.sort((a, b) => b.best - a.best);
 }

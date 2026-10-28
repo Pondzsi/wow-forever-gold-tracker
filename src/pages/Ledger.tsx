@@ -12,9 +12,10 @@ import {
   toLocalInput,
   useCharacters,
   EmptyState,
-  Skeleton,
-} from '../ui';
+  Skeleton, Disclosure } from '../ui';
 import { deleteWithUndo, useToast } from '../toast';
+
+import { useSort } from '../sort';
 
 export function Ledger() {
   const toast = useToast();
@@ -53,14 +54,23 @@ export function Ledger() {
   const shown = entries.filter(
     (e) => (filterChar === 'all' || e.characterId === filterChar) && (filterCat === 'all' || e.category === filterCat),
   );
+  const ledgerSort = useSort(
+    shown,
+    {
+      date: (e) => e.time,
+      who: (e) => e.characterId,
+      category: (e) => e.category,
+      amount: (e) => e.copper,
+    },
+    { key: 'date', desc: true },
+  );
   const income = shown.filter((e) => e.copper > 0).reduce((s, e) => s + e.copper, 0);
   const expense = shown.filter((e) => e.copper < 0).reduce((s, e) => s + e.copper, 0);
 
   return (
     <>
       <h2>Ledger</h2>
-      <div className="card">
-        <h3>Add entry</h3>
+      <Disclosure title="Add entry by hand" defaultOpen={entriesQ !== undefined && entriesQ.length === 0}>
         <form
           className="row"
           onSubmit={(e) => {
@@ -101,7 +111,7 @@ export function Ledger() {
             Add
           </button>
         </form>
-      </div>
+      </Disclosure>
 
       <div className="card">
         <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -140,17 +150,17 @@ export function Ledger() {
           <div className="table-wrap"><table>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Character</th>
-                <th>Category</th>
+                <ledgerSort.Th k="date" label="Date" num />
+                <ledgerSort.Th k="who" label="Character" />
+                <ledgerSort.Th k="category" label="Category" />
                 <th>Note</th>
                 <th>Source</th>
-                <th className="num">Amount</th>
+                <ledgerSort.Th k="amount" label="Amount" num />
                 <th />
               </tr>
             </thead>
             <tbody>
-              {shown.map((e) => (
+              {ledgerSort.sorted.map((e) => (
                 <tr key={e.id}>
                   <td className="small muted">{fmtDate(e.time)}</td>
                   <td>{charName(characters, e.characterId)}</td>

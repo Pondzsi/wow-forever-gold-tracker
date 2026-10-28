@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ahNet,
+  decideHoldings,
   evaluateRecipe,
   goldChangeSince,
   latestPrices,
@@ -126,5 +127,53 @@ describe('goldChangeSince', () => {
     expect(goldChangeSince(snaps, [1], 50, 300)).toBe(2000);
     expect(goldChangeSince(snaps, [1], 150, 300)).toBe(2000);
     expect(goldChangeSince(snaps, [1], 250, 300)).toBe(0);
+  });
+});
+
+describe('decideHoldings', () => {
+  const fees = { ahCutPercent: 5 };
+  const it2 = new Map<number, Item>([
+    [1, { id: 1, name: 'Bolt of Silk Cloth', vendorPrice: 100 }],
+    [2, { id: 2, name: 'Silk Bag', vendorPrice: 2000 }],
+    [3, { id: 3, name: 'Fine Thread', vendorPrice: 25 }],
+    [10, { id: 10, name: 'Gray Junk', vendorPrice: 50 }],
+    [11, { id: 11, name: 'Soulbound Sword', vendorPrice: 900, bound: true }],
+    [12, { id: 12, name: 'Quest Thing', bindType: 4 }],
+    [13, { id: 13, name: 'Unknown Ore', vendorPrice: 10 }],
+  ]);
+  const decide = (held: [number, number][], prices: Price[], recipes = [] as typeof recipe[]) =>
+    new Map(decideHoldings(new Map(held), it2, latestPrices(prices), fees, recipes, 3, 10).map((d) => [d.itemId, d]));
+
+  it('sells on the AH when it pays more than a vendor', () => {
+    const d = decide([[1, 10]], [price(1, 500, 5)]).get(1)!;
+    expect(d.decision).toBe('Sell on AH');
+    expect(d.ahNet).toBe(4750);
+    expect(d.vendor).toBe(1000);
+  });
+
+  it('vendors when the vendor pays at least the AH net', () => {
+    expect(decide([[10, 4]], [price(10, 50, 5)]).get(10)!.decision).toBe('Vendor');
+  });
+
+  it('vendors or keeps items that cannot go on the AH', () => {
+    const d = decide([[11, 1], [12, 1]], []);
+    expect(d.get(11)!.decision).toBe('Vendor');
+    expect(d.get(12)!.decision).toBe('Keep');
+  });
+
+  it('asks to check the AH when there is no price', () => {
+    expect(decide([[13, 5]], []).get(13)!.decision).toBe('Check AH');
+  });
+
+  it('keeps materials when crafting pays more', () => {
+    const prices = [price(1, 3000, 5), price(2, 15000, 5), price(3, 50, 5)];
+    const d = decide([[1, 6]], prices, [recipe]).get(1)!;
+    expect(d.decision).toBe('Keep');
+    expect(d.reason).toMatch(/Silk Bag/);
+  });
+
+  it('flags old prices', () => {
+    const d = decideHoldings(new Map([[1, 1]]), it2, latestPrices([price(1, 500, 0)]), fees, [], 3, 10 * 86_400_000);
+    expect(d[0].stale).toBe(true);
   });
 });

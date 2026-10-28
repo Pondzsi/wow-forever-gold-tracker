@@ -52,6 +52,44 @@ export function Money({
   );
 }
 
+/**
+ * A panel whose content (usually a hand-entry form) folds away behind a "+ title" button.
+ * Open by default when the page has no data yet; `forceOpen` keeps it open (e.g. while editing).
+ */
+export function Disclosure({
+  title,
+  defaultOpen = false,
+  forceOpen = false,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  forceOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [choice, setChoice] = useState<boolean | null>(null);
+  const [id] = useState(() => `disc-${Math.random().toString(36).slice(2)}`);
+  const open = forceOpen || (choice ?? defaultOpen);
+  return (
+    <div className={`card disclosure ${open ? 'open' : ''}`}>
+      <button
+        className="disclosure-toggle"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setChoice(!open)}
+        disabled={forceOpen}
+      >
+        <span aria-hidden>{open ? '−' : '+'}</span> {title}
+      </button>
+      {open && (
+        <div id={id} className="disclosure-body">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** What a page shows when it has no data yet: where data comes from and what to do. */
 export function EmptyState({ icon, children, actions }: { icon?: ReactNode; children: ReactNode; actions?: ReactNode }) {
   return (

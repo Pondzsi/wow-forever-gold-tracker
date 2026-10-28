@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { db, type ProfessionSnapshot } from '../db';
-import { CharacterSelect, charName, fmtAge, fmtDate, themeColor, useCharacters } from '../ui';
+import { CharacterSelect, charName, fmtAge, fmtDate, themeColor, useCharacters, Disclosure } from '../ui';
 
 const SECONDARY = ['Fishing', 'Cooking', 'First Aid'];
 
@@ -45,8 +45,7 @@ export function Professions() {
   return (
     <>
       <h2>Professions</h2>
-      <div className="card">
-        <h3>Record skill level</h3>
+      <Disclosure title="Record a skill level by hand" defaultOpen={snaps.length === 0}>
         <form
           className="row"
           onSubmit={(e) => {
@@ -92,7 +91,7 @@ export function Professions() {
           </button>
         </form>
         <p className="hint">Max is the current cap from your training rank. Forever's skill brackets are not verified yet.</p>
-      </div>
+      </Disclosure>
 
       <div className="card">
         <h3>Current levels</h3>

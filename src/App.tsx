@@ -1,6 +1,7 @@
 import {
   Backpack,
   BookOpen,
+  Coins,
   Ellipsis,
   Fish,
   GraduationCap,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { GAME_VERSIONS, gameVersion, setGameVersion } from './db';
+import { ErrorBoundary } from './ErrorBoundary';
 import { Crafting } from './pages/Crafting';
 import { Goals } from './pages/Goals';
 import { Inventory } from './pages/Inventory';
@@ -22,6 +24,7 @@ import { Ledger } from './pages/Ledger';
 import { Overview } from './pages/Overview';
 import { Prices } from './pages/Prices';
 import { Professions } from './pages/Professions';
+import { SellList } from './pages/SellList';
 import { Sessions } from './pages/Sessions';
 import { SettingsPage } from './pages/Settings';
 import { describeResult, Sync } from './pages/Sync';
@@ -44,7 +47,8 @@ const NAV: NavItem[] = [
   { path: 'overview', label: 'Overview', icon: Home, group: '', component: Overview, mobile: true },
   { path: 'ledger', label: 'Ledger', icon: BookOpen, group: 'Money', component: Ledger, mobile: true },
   { path: 'goals', label: 'Goals', icon: Target, group: 'Money', component: Goals },
-  { path: 'prices', label: 'Prices', icon: Scale, group: 'Market', component: Prices, mobile: true },
+  { path: 'sell', label: 'Sell list', icon: Coins, group: 'Market', component: SellList, mobile: true },
+  { path: 'prices', label: 'Prices', icon: Scale, group: 'Market', component: Prices },
   { path: 'inventory', label: 'Inventory', icon: Backpack, group: 'Market', component: Inventory },
   { path: 'crafting', label: 'Crafting', icon: Hammer, group: 'Market', component: Crafting },
   { path: 'sessions', label: 'Sessions', icon: Fish, group: 'Play', component: Sessions, mobile: true },
@@ -185,7 +189,9 @@ function Shell() {
       </nav>
 
       <main id="main" tabIndex={-1}>
-        <Page />
+        <ErrorBoundary resetKey={path}>
+          <Page />
+        </ErrorBoundary>
       </main>
 
       <nav className="bottom-bar" aria-label="Main">

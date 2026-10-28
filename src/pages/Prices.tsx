@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { isStale, vendorBeatsAH } from '../calc';
-import { db, getOrCreateItem, type PriceSource } from '../db';
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { db, getOrCreateItem, type Price, type PriceSource } from '../db';
 import { formatMoney, parseMoney } from '../money';
 import {
   fmtAge,
@@ -15,9 +16,13 @@ import {
   usePriceMap,
   useSettings,
   EmptyState,
+  Disclosure,
+  themeColor,
 } from '../ui';
 import { ItemLink } from '../wowhead';
 import { deleteWithUndo, useToast } from '../toast';
+
+import { useSort } from '../sort';
 
 export function Prices() {
   const toast = useToast();
@@ -54,13 +59,23 @@ export function Prices() {
   }
 
   const shownItems = items.list.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
+  const priceSort = useSort(
+    shownItems,
+    {
+      item: (i) => i.name,
+      price: (i) => latest.get(i.id!)?.copper,
+      age: (i) => latest.get(i.id!)?.time,
+      source: (i) => latest.get(i.id!)?.source,
+      vendor: (i) => i.vendorPrice,
+    },
+    { key: 'item' },
+  );
   const history = selected === null ? [] : all.filter((p) => p.itemId === selected);
 
   return (
     <>
       <h2>Prices</h2>
-      <div className="card">
-        <h3>Record a price</h3>
+      <Disclosure title="Record a price by hand" defaultOpen={items.list.length === 0}>
         <form
           className="row"
           onSubmit={(e) => {
@@ -95,7 +110,7 @@ export function Prices() {
         <p className="hint">
           Always enter the price for <b>one</b> unit. Prices older than {settings.staleDays} days are marked in orange.
         </p>
-      </div>
+      </Disclosure>
 
       <div className="card">
         <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -108,17 +123,17 @@ export function Prices() {
           <div className="table-wrap"><table>
             <thead>
               <tr>
-                <th>Item</th>
-                <th className="num">Latest price</th>
-                <th>Age</th>
-                <th>Source</th>
-                <th>Vendor price</th>
+                <priceSort.Th k="item" label="Item" />
+                <priceSort.Th k="price" label="Latest price" num />
+                <priceSort.Th k="age" label="Date" num />
+                <priceSort.Th k="source" label="Source" />
+                <priceSort.Th k="vendor" label="Vendor price" num />
                 <th>Deposit / unit</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {shownItems.map((i) => {
+              {priceSort.sorted.map((i) => {
                 const p = latest.get(i.id!);
                 return (
                   <tr
@@ -177,6 +192,7 @@ export function Prices() {
           <h3>
             Price history: <ItemLink item={items.byId.get(selected)} size="medium" />
           </h3>
+          {history.length >= 2 && <PriceTrend history={history} />}
           {history.length === 0 ? (
             <p className="muted">No prices recorded.</p>
           ) : (
@@ -212,5 +228,56 @@ export function Prices() {
         </div>
       )}
     </>
+  );
+}
+
+/** Price over time, plus how the latest price compares with the 7 days before it. */
+function PriceTrend({ history }: { history: Price[] }) {
+  const points = [...history].sort((a, b) => a.time - b.time).map((p) => ({ time: p.time, copper: p.copper }));
+  const last = points[points.length - 1];
+  const week = points.filter((p) => p.time < last.time && p.time >= last.time - 7 * 86_400_000);
+  const avg = week.length ? week.reduce((s, p) => s + p.copper, 0) / week.length : null;
+  const change = avg ? Math.round(((last.copper - avg) / avg) * 100) : null;
+  return (
+    <div style={{ marginBottom: 'var(--s3)' }}>
+      {change !== null && (
+        <p className="small" style={{ margin: '0 0 var(--s2)' }}>
+          Latest <Money copper={last.copper} /> is{' '}
+          <b className={change > 0 ? 'good' : change < 0 ? 'bad' : ''}>
+            {change === 0 ? 'the same as' : `${Math.abs(change)}% ${change > 0 ? 'above' : 'below'}`}
+          </b>{' '}
+          the average of the 7 days before it (<Money copper={Math.round(avg!)} />).
+          {change < -10 ? ' Prices dipped: a good time to buy, not to sell.' : ''}
+          {change > 10 ? ' Prices are up: a good time to sell.' : ''}
+        </p>
+      )}
+      <ResponsiveContainer width="100%" height={160}>
+        <LineChart data={points} margin={{ top: 6, right: 12, bottom: 0, left: 0 }}>
+          <CartesianGrid stroke={themeColor('--border')} strokeDasharray="3 3" />
+          <XAxis
+            dataKey="time"
+            type="number"
+            scale="time"
+            domain={['dataMin', 'dataMax']}
+            tickFormatter={(t: number) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            stroke={themeColor('--muted')}
+            fontSize={11}
+          />
+          <YAxis
+            stroke={themeColor('--muted')}
+            fontSize={11}
+            width={72}
+            tickFormatter={(v: number) => formatMoney(Math.round(v))}
+            domain={['auto', 'auto']}
+          />
+          <Tooltip
+            contentStyle={{ background: themeColor('--panel-2'), border: `1px solid ${themeColor('--trim')}`, color: themeColor('--text') }}
+            labelFormatter={(t) => fmtDate(Number(t))}
+            formatter={(v) => [formatMoney(Number(v)), 'Price']}
+          />
+          <Line type="monotone" dataKey="copper" stroke={themeColor('--gold')} strokeWidth={2} dot={{ r: 2 }} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

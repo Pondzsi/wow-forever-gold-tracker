@@ -381,3 +381,50 @@ a.item-link:hover { text-decoration: underline; }
 }
 .bag-slot:hover { filter: brightness(1.2); }
 .bag-slot:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ---------- Sortable headers, stat tiles ---------- */
+
+.sort-btn {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;
+  font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit;
+}
+.sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+th[aria-sort='ascending'], th[aria-sort='descending'] { color: var(--accent); }
+
+button.stat-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left;
+  color: var(--text); font-weight: 400; cursor: pointer;
+}
+button.stat-tile:hover { border-color: var(--trim); filter: none; }
+button.stat-tile.selected { border-color: var(--accent); }
+
+/* ---------- Overview ---------- */
+
+.status-line {
+  display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap;
+  margin: calc(-1 * var(--s2)) 0 var(--s4); color: var(--muted); font-size: 14px;
+}
+.status-line button { padding: 3px 10px; }
+.delta-row { display: flex; gap: var(--s5); flex-wrap: wrap; margin-top: var(--s3); }
+a.stat-link { display: block; text-decoration: none; color: var(--text); }
+a.stat-link:hover { border-color: var(--trim); }
+ul.plain-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+
+/* ---------- Disclosure (hand-entry forms) ---------- */
+
+.card.disclosure { padding: var(--s2) var(--s4); }
+.card.disclosure.open { padding-bottom: var(--s4); }
+.disclosure-toggle {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: var(--s2);
+  padding: var(--s2) 0; color: var(--accent); font-weight: 600; font-size: 15px;
+}
+.disclosure-toggle span { display: inline-block; width: 1em; text-align: center; font-size: 18px; }
+.disclosure-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.disclosure-toggle:disabled { cursor: default; }
+.disclosure-body { margin-top: var(--s2); }
+
+details.card > summary { cursor: pointer; list-style: none; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::before { content: '+ '; color: var(--accent); font-weight: 700; }
+details.card[open] > summary::before { content: '− '; }
+details.card[open] > summary { margin-bottom: var(--s3); }

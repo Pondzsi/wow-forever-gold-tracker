@@ -28,6 +28,8 @@ import {
 } from '../ui';
 import { ItemLink } from '../wowhead';
 
+import { useSort } from '../sort';
+
 export function Sessions() {
   const sessionsQ = useLiveQuery(() => db.sessions.orderBy('start').reverse().toArray(), []);
   const sessions = sessionsQ ?? [];
@@ -39,6 +41,18 @@ export function Sessions() {
 
   const active = sessions.find((s) => s.end === undefined);
   const done = sessions.filter((s) => s.end !== undefined);
+  const statsOf = (s: Session) => sessionStats(s, sessionItems.filter((i) => i.sessionId === s.id), prices);
+  const sessionSort = useSort(
+    done,
+    {
+      start: (s) => s.start,
+      type: (s) => `${s.type} ${s.zone}`,
+      time: (s) => (s.end ?? 0) - s.start,
+      total: (s) => statsOf(s).total,
+      perHour: (s) => statsOf(s).perHour,
+    },
+    { key: 'start', desc: true },
+  );
 
   return (
     <>
@@ -67,19 +81,19 @@ export function Sessions() {
           <div className="table-wrap"><table>
             <thead>
               <tr>
-                <th>Start</th>
+                <sessionSort.Th k="start" label="Start" num />
                 <th>Character</th>
-                <th>Type / zone</th>
-                <th className="num">Time</th>
+                <sessionSort.Th k="type" label="Type / zone" />
+                <sessionSort.Th k="time" label="Time" num />
                 <th className="num">Gold change</th>
                 <th className="num">Items value</th>
-                <th className="num">Total</th>
-                <th className="num">Per hour</th>
+                <sessionSort.Th k="total" label="Total" num />
+                <sessionSort.Th k="perHour" label="Per hour" num />
                 <th />
               </tr>
             </thead>
             <tbody>
-              {done.map((s) => {
+              {sessionSort.sorted.map((s) => {
                 const st = sessionStats(s, sessionItems.filter((i) => i.sessionId === s.id), prices);
                 return (
                   <tr key={s.id}>
