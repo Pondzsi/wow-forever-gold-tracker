@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Forever Gold Tracker</title>
-    <meta name="description" content="Track gold, Auction House prices and profession profit in WoW: Forever, with almost no typing." />
+    <meta name="description" content="Know what to sell, where to sell it and when. A free dashboard and addon for WoW: Forever." />
     <style>
       @font-face {
         font-family: 'Marcellus';
@@ -61,7 +61,7 @@
         margin: 0 auto;
         padding: 30px 44px 18px;
         display: grid;
-        grid-template-rows: auto auto 1fr auto;
+        grid-template-rows: auto 1fr auto;
         gap: 16px;
       }
 
@@ -216,6 +216,28 @@
         .features { grid-template-columns: 1fr; }
         table { font-size: 14px; }
       }
+
+      /* Decisions */
+      .decisions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .decision {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--accent);
+        border-radius: 4px;
+        padding: 11px 14px;
+      }
+      .decision .q { display: block; font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+      .decision .a { color: var(--muted); font-size: 15px; line-height: 1.35; }
+      .shot { display: block; width: 100%; height: auto; border-radius: 4px; border: 1px solid var(--border); }
+      .caption { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+      .bottom { display: grid; grid-template-columns: 1fr; gap: 18px; }
+      .flow.compact { grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+      .flow.compact .step span { font-size: 14.5px; }
+      .main.decide { grid-template-columns: 1.4fr 1fr; align-self: center; }
+      @media (max-width: 1100px) {
+        .bottom, .main.decide, .flow.compact { grid-template-columns: 1fr; }
+        .decisions { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
@@ -223,115 +245,97 @@
       <header>
         <div>
           <h1>Forever Gold Tracker</h1>
-          <p class="tagline">
-            Gold, Auction House prices and profession profit for <b>WoW: Forever</b>, with almost no typing.
+          <p class="tagline">Know <b>what to sell</b>, <b>where to sell it</b> and <b>when</b>.</p>
+          <p class="caption" style="font-size: 17px">
+            A free dashboard and addon for WoW: Forever. The addon collects the data. You do not type it.
           </p>
         </div>
         <div class="url">
-          Free, in your browser<br />
+          Open it in your browser:<br />
           <a href="../">pondzsi.github.io/wow-forever-gold-tracker</a>
         </div>
       </header>
 
-      <section class="panel" aria-labelledby="how">
-        <h2 id="how">How it works</h2>
-        <div class="flow">
-          <div class="step">
-            <span class="num">1</span>
-            <div>
-              <b>Play as usual</b>
-              <span>The Gold Tracker addon records gold, bags, bank, skills, recipes, AH sales and fishing. Auctionator records prices.</span>
+      <div class="main decide">
+        <div class="side">
+        <section class="panel" aria-labelledby="decide">
+          <h2 id="decide">Decisions that the tool makes for you</h2>
+          <div class="decisions">
+            <div class="decision">
+              <span class="q">Sell on the AH or to a vendor?</span>
+              <span class="a">The tool compares the AH price after the AH fee with the vendor price. It shows the better choice.</span>
             </div>
-          </div>
-          <div class="arrow" aria-hidden="true">➜</div>
-          <div class="step">
-            <span class="num">2</span>
-            <div>
-              <b>Type /reload or log out</b>
-              <span>WoW saves the data. A small helper from setup.bat copies it where the browser can read it.</span>
+            <div class="decision">
+              <span class="q">Craft the item or sell the materials?</span>
+              <span class="a">The tool calculates the cost of the materials and the value of the product. It shows which gives more gold.</span>
             </div>
-          </div>
-          <div class="arrow" aria-hidden="true">➜</div>
-          <div class="step">
-            <span class="num">3</span>
-            <div>
-              <b>Switch to the dashboard</b>
-              <span>It syncs by itself and tells you what to sell, craft or keep. Your data stays on your PC.</span>
+            <div class="decision">
+              <span class="q">Sell now or wait?</span>
+              <span class="a">The tool compares the latest AH price with the average of the last 7 days. It tells you when the price is high.</span>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <div class="main">
-        <section class="panel" aria-labelledby="today">
-          <h2 id="today">What it does today</h2>
-          <div class="features">
-            <div class="feature"><b>Gold &amp; ledger</b><span>Every gold change per character, sorted into vendor, AH, mail, repair, trainer…</span></div>
-            <div class="feature"><b>Sell list</b><span>Sell on the AH, vendor or keep, for everything in your bags and bank, after AH fees.</span></div>
-            <div class="feature"><b>AH prices &amp; trends</b><span>Auctionator scans become a price history, with "prices are up / down" hints.</span></div>
-            <div class="feature"><b>Crafting profit</b><span>Craft vs. sell the materials vs. vendor. Recipes are read from the profession window.</span></div>
-            <div class="feature"><b>Bag view</b><span>Your bags and bank as item slots, with Wowhead icons, tooltips and quality colors.</span></div>
-            <div class="feature"><b>Fishing sessions</b><span>Start by themselves on your first catch: gold per hour and trunk contents.</span></div>
-            <div class="feature"><b>Real AH fees</b><span>Read from your AH sale mails, so profit math uses Forever's actual cut and deposit.</span></div>
-            <div class="feature"><b>Goals</b><span>Riding, epic mount or any target, with progress and an estimated date.</span></div>
-            <div class="feature"><b>Game versions</b><span>Forever, Retail and Classic keep separate data. Ranked to-do list for what's left.</span></div>
+            <div class="decision">
+              <span class="q">Can this item go on the AH?</span>
+              <span class="a">The tool finds soulbound, quest and warbound items. You do not search the AH for these items.</span>
+            </div>
+            <div class="decision">
+              <span class="q">Which activity gives the most gold?</span>
+              <span class="a">The tool records the gold per hour of each fishing and farming session.</span>
+            </div>
+            <div class="decision">
+              <span class="q">When do I reach my goal?</span>
+              <span class="a">The tool calculates a date from your gold income of the last 7 days. Example goal: epic mount.</span>
+            </div>
           </div>
         </section>
+        <section class="panel" aria-labelledby="how">
+          <h2 id="how">How it works</h2>
+          <div class="flow compact">
+            <div class="step">
+              <span class="num">1</span>
+              <div>
+                <b>Play the game</b>
+                <span>The addon records your gold, items and sales. Auctionator records the AH prices.</span>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">2</span>
+              <div>
+                <b>Type /reload</b>
+                <span>WoW saves the data. The setup helper copies it to your Documents folder.</span>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">3</span>
+              <div>
+                <b>Open the dashboard</b>
+                <span>The dashboard reads the data and shows the decisions. Your data stays on your PC.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+        </div>
 
         <div class="side">
-          <section class="panel" aria-labelledby="example">
-            <h2 id="example">Example: the Sell list</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Do</th>
-                  <th class="num-cell">Worth</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="q1">Silk Cloth ×60</td>
-                  <td><span class="badge sell">Sell on AH</span></td>
-                  <td class="num-cell"><span class="s">79s</span> <span class="c">80c</span></td>
-                </tr>
-                <tr>
-                  <td class="q2">Ridge Cleaver</td>
-                  <td><span class="badge vendor">Vendor</span></td>
-                  <td class="num-cell"><span class="s">38s</span> <span class="c">40c</span></td>
-                </tr>
-                <tr>
-                  <td class="q1">Linen Cloth ×40</td>
-                  <td><span class="badge keep">Keep</span></td>
-                  <td class="num-cell muted" style="color: var(--muted)">for bags</td>
-                </tr>
-                <tr>
-                  <td class="q3">Pattern: Red Linen Bag</td>
-                  <td><span class="badge sell">Sell on AH</span></td>
-                  <td class="num-cell"><span class="g">1g</span> <span class="s">20s</span></td>
-                </tr>
-              </tbody>
-            </table>
-            <p class="example-note">Example values. Real numbers come from your own Auctionator scans.</p>
+          <section class="panel" aria-labelledby="bags">
+            <h2 id="bags">Your bags, item by item</h2>
+            <img class="shot" src="bag-view.png" width="964" height="478" alt="Bag view with item icons, stack counts, quality borders and a Wowhead tooltip for Star Ruby" />
+            <p class="caption">Item icons and in-game tooltips come from Wowhead. Border colors show the item quality.</p>
           </section>
-
           <section class="panel" aria-labelledby="next">
             <h2 id="next">Coming next</h2>
             <ul class="next">
-              <li><div>Addon health check <span>– see on launch day what works in Forever</span></div></li>
-              <li><div>Automatic daily backups <span>– to your Documents folder</span></div></li>
-              <li><div>Disenchant tracking <span>– real disenchant values in the Sell list</span></div></li>
-              <li><div>Your auctions <span>– what sold, what expired, sell rate per item</span></div></li>
-              <li><div>Profession leveling cost <span>– gold per skill point</span></div></li>
-              <li><div>Gold per hour by activity <span>– fishing vs. farming vs. trading</span></div></li>
+              <li><div>Addon health check <span>– shows which game data works in WoW: Forever.</span></div></li>
+              <li><div>Daily backups <span>– saves your data to your Documents folder.</span></div></li>
+              <li><div>Disenchant values <span>– adds disenchanting to the Sell list.</span></div></li>
+              <li><div>Auction results <span>– shows which items sold and which expired.</span></div></li>
             </ul>
           </section>
         </div>
       </div>
 
       <footer>
-        <span><b>Needs:</b> the Gold Tracker addon (setup.bat installs it), Auctionator, Chrome or Edge on Windows.</span>
-        <span>Free, fan-made. Not affiliated with Blizzard Entertainment or Wowhead.</span>
+        <span><b>You need:</b> Windows, Chrome or Edge, and the Auctionator addon. The setup installs the Gold Tracker addon.</span>
+        <span>Free. Made by fans. Not affiliated with Blizzard Entertainment or Wowhead.</span>
       </footer>
     </main>
   </body>
