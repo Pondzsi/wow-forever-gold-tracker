@@ -79,10 +79,32 @@ export function SettingsPage() {
             onChange={(e) => void db.settings.put({ ...settings, depositNote: e.target.value })}
           />
         </label>
-        <p className="hint">
-          5% cut and a refunded deposit are the Classic rules. Neither is verified for Forever. Check them after your
-          first AH sales and correct them here.
-        </p>
+        {settings.observedSales ? (
+          <div className="row" style={{ marginTop: 10 }}>
+            <span>
+              Observed from {settings.observedSales} AH sale mail(s): <b>{settings.observedCutPercent}%</b> cut, deposit{' '}
+              <b>{settings.observedDepositRefunded === false ? 'not refunded' : 'refunded'}</b>.
+            </span>
+            <button
+              className="secondary"
+              onClick={() =>
+                void db.settings.put({
+                  ...settings,
+                  ahCutPercent: settings.observedCutPercent ?? settings.ahCutPercent,
+                  depositRefundedOnSale: settings.observedDepositRefunded ?? settings.depositRefundedOnSale,
+                })
+              }
+            >
+              Use observed fees
+            </button>
+          </div>
+        ) : (
+          <p className="hint">
+            5% cut and a refunded deposit are the Classic rules, not verified for Forever. The addon reads the real
+            values from your first AH sale mail.
+          </p>
+        )}
+        <AuctionatorRealm />
       </div>
 
       <div className="card">
@@ -129,6 +151,45 @@ export function SettingsPage() {
         {message && <p className="hint">{message}</p>}
       </div>
     </>
+  );
+}
+
+/** Lets you pick the realm when Auctionator.lua has prices for several. */
+function AuctionatorRealm() {
+  const settings = useSettings();
+  const [realms, setRealms] = useState<string[] | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="row" style={{ marginTop: 10 }}>
+      <label className="field">
+        Auctionator realm
+        <input
+          value={settings.auctionatorRealm ?? ''}
+          placeholder="newest realm in the file"
+          list="atr-realms"
+          onChange={(e) => void db.settings.put({ ...settings, auctionatorRealm: e.target.value || undefined })}
+        />
+        <datalist id="atr-realms">{realms?.map((r) => <option key={r} value={r} />)}</datalist>
+      </label>
+      <button className="link" style={{ color: 'var(--accent)' }} onClick={() => fileRef.current?.click()}>
+        list realms from Auctionator.lua…
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".lua"
+        hidden
+        onChange={async (e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          const { parseSavedVariables } = await import('../sync/luaParse');
+          const { listAuctionatorRealms } = await import('../sync/importAuctionator');
+          setRealms(listAuctionatorRealms(parseSavedVariables(await f.text())).map((r) => r.name));
+          e.target.value = '';
+        }}
+      />
+      {realms && <span className="small muted">{realms.length ? realms.join(', ') : 'no realms in file'}</span>}
+    </div>
   );
 }
 

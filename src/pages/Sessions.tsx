@@ -81,9 +81,30 @@ export function Sessions() {
                       {s.type} · {s.zone}
                       {s.type === 'fishing' && (
                         <div className="small muted">
-                          {s.water}
-                          {s.fishRackUsed ? ' · rack' : ''}
+                          <select
+                            className="small"
+                            style={{ padding: '1px 4px' }}
+                            value={s.water ?? ''}
+                            title="Pools or open water (optional)"
+                            onChange={(e) =>
+                              void db.sessions.update(s.id!, { water: (e.target.value || undefined) as WaterType | undefined })
+                            }
+                          >
+                            <option value="">water?</option>
+                            <option value="pools">pools</option>
+                            <option value="open water">open water</option>
+                            <option value="mixed">mixed</option>
+                          </select>{' '}
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={!!s.fishRackUsed}
+                              onChange={(e) => void db.sessions.update(s.id!, { fishRackUsed: e.target.checked })}
+                            />{' '}
+                            rack
+                          </label>
                           {s.lureUsed ? ' · lure' : ''}
+                          {s.catches !== undefined ? ` · ${s.catches} catches` : ''}
                           {s.fishingSkillStart !== undefined && s.fishingSkillEnd !== undefined
                             ? ` · skill ${s.fishingSkillStart}→${s.fishingSkillEnd}`
                             : ''}

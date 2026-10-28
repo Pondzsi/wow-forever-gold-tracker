@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: Gold Tracker
+## Notes: Records gold, items, professions, recipes, AH sales and fishing for the Forever Gold Tracker dashboard. Read-only: it never acts for you.
+## Version: 0.1.0
+## OptionalDeps: Auctionator
+## SavedVariables: GoldTrackerDB
+
+GoldTracker.lua

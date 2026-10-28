@@ -162,6 +162,22 @@ Passive only. It observes and saves data. No automation of any kind.
 - PvP and dungeon tracking.
 - Hosted database, multiple devices, accounts.
 
+## 9b. Automation update (2026-10-28)
+
+Goal: no manual forms where the game can supply the data.
+
+- **Auctionator is required.** AH prices come from `AUCTIONATOR_PRICE_DATABASE` in `Auctionator.lua`
+  (per realm; per item `m` = latest min price, `h`/`l` = daily high/low, days since 2020-01-01).
+  Only items the dashboard knows are imported. The Gold Tracker addon does not scan the AH.
+  Format checked against Auctionator 9.x source; verify with a real Forever file at launch.
+- **Addon also records:** vendor prices (game data), AH sale mails (exact price, deposit and cut, which
+  verify the fee settings), recipes from the profession window, and fishing sessions that start on the
+  first catch and end after 15 minutes without one. Trunk/fish contents are read from the loot window.
+- **Sync:** the dashboard keeps read access to the WoW folder (Chrome/Edge) and imports both files
+  whenever its tab gets focus. `/gt sync` reloads the UI so WoW writes the files right away.
+- **Sync & to-do page:** lists what is still manual, ranked High / Medium / Low, plus a table of what is
+  automatic.
+
 ## 10. Milestones
 
 1. **M1 — Manual dashboard (before launch).**

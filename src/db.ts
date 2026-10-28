@@ -82,6 +82,7 @@ export interface Recipe {
   productCount: number;
   reagents: Reagent[];
   patternCost?: number; // copper paid for the pattern, if bought
+  source?: Source; // 'addon' recipes are updated by sync; manual ones never
 }
 
 export interface ProfessionSnapshot {
@@ -112,6 +113,8 @@ export interface Session {
   lureUsed?: boolean;
   fishingSkillStart?: number;
   fishingSkillEnd?: number;
+  catches?: number;
+  source?: Source;
 }
 
 export interface SessionItem {
@@ -143,6 +146,22 @@ export interface Settings {
   staleDays: number;
   depositNote: string;
   depositRefundedOnSale?: boolean; // Classic refunds it; unverified for Forever
+  // Filled in from AH sale mails read by the addon:
+  observedSales?: number;
+  observedCutPercent?: number;
+  observedDepositRefunded?: boolean;
+  auctionatorRealm?: string; // which realm's prices to use, when several
+}
+
+/** Small key/value store for sync state (folder handle, last import). */
+export interface Meta {
+  key: string;
+  value: unknown;
+}
+
+/** Ids of addon events and Auctionator prices already imported. */
+export interface SyncLogRow {
+  id: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -167,6 +186,8 @@ export class GoldDB extends Dexie {
   containerOpens!: Table<ContainerOpen, number>;
   goals!: Table<Goal, number>;
   settings!: Table<Settings, string>;
+  meta!: Table<Meta, string>;
+  syncLog!: Table<SyncLogRow, string>;
 
   constructor() {
     super('wow-forever-gold');
@@ -184,6 +205,10 @@ export class GoldDB extends Dexie {
       containerOpens: '++id, sessionId, containerItemId',
       goals: '++id',
       settings: 'id',
+    });
+    this.version(2).stores({
+      meta: 'key',
+      syncLog: 'id',
     });
     this.on('populate', (tx) => {
       tx.table('characters').bulkAdd([
@@ -211,6 +236,7 @@ export const TABLE_NAMES = [
   'containerOpens',
   'goals',
   'settings',
+  'syncLog', // kept in backups so a restore does not import events twice
 ] as const;
 
 /** Finds an item by name (case-insensitive) or creates it. */
