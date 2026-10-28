@@ -59,7 +59,11 @@ export async function importGoldTracker(saved: Record<string, LuaValue>): Promis
   const events = asArray<Obj>(root.events);
   const recipes = (root.recipes ?? {}) as Record<string, Obj>;
 
-  await db.transaction('rw', db.tables, async () => {
+  // No single transaction here: the helpers below are plain async functions that
+  // sometimes finish without a database call, and IndexedDB would then commit a
+  // surrounding transaction too early. Each event is marked as imported only after
+  // it is saved, so a failed import can be rerun without duplicates.
+  await (async () => {
     // ---- Items: match by game item id, then by name; vendor price from game data.
     const allItems = await db.items.toArray();
     const byGameId = new Map(allItems.filter((i) => i.gameItemId).map((i) => [i.gameItemId!, i]));
@@ -178,7 +182,6 @@ export async function importGoldTracker(saved: Record<string, LuaValue>): Promis
       const id = str(e.id);
       if (!id || seen.has(id)) continue;
       seen.add(id);
-      await db.syncLog.add({ id });
       report.newEvents++;
       const characterId = await charFor(str(e.c) ?? '?');
       const time = ms(e.t);
@@ -280,6 +283,7 @@ export async function importGoldTracker(saved: Record<string, LuaValue>): Promis
         default:
           report.warnings.push(`Unknown event type: ${String(e.k)}`);
       }
+      await db.syncLog.add({ id });
     }
 
     await db.settings.put({
@@ -310,7 +314,7 @@ export async function importGoldTracker(saved: Record<string, LuaValue>): Promis
 
     const lastError = str(root.lastError);
     if (lastError) report.warnings.push(`Addon reported an error: ${lastError}`);
-  });
+  })();
 
   return report;
 }
