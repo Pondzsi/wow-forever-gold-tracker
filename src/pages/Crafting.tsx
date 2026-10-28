@@ -4,6 +4,7 @@ import { evaluateRecipe } from '../calc';
 import { db, getOrCreateItem, type Recipe } from '../db';
 import { formatMoney, parseMoney } from '../money';
 import { ItemField, Money, MoneyField, useItems, usePriceMap, useSettings, EmptyState, Skeleton } from '../ui';
+import { ItemLink } from '../wowhead';
 import { deleteWithUndo, useToast } from '../toast';
 
 const PROFESSIONS = ['Leatherworking', 'Tailoring', 'Enchanting', 'Cooking', 'First Aid', 'Other'];
@@ -205,12 +206,17 @@ export function Crafting() {
                   <tr key={r.id}>
                     <td>
                       <div>
-                        {items.byId.get(r.productItemId)?.name}
+                        <ItemLink item={items.byId.get(r.productItemId)} />
                         {r.productCount > 1 ? ` ×${r.productCount}` : ''}
                       </div>
                       <div className="small muted">
                         {r.profession} ·{' '}
-                        {r.reagents.map((x) => `${x.count}× ${items.byId.get(x.itemId)?.name}`).join(', ')}
+                        {r.reagents.map((x, k) => (
+                          <span key={k}>
+                            {k ? ', ' : ''}
+                            {x.count}× <ItemLink item={items.byId.get(x.itemId)} />
+                          </span>
+                        ))}
                       </div>
                     </td>
                     <td className="num">

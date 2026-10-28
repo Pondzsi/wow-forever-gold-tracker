@@ -48,6 +48,7 @@ export interface Item {
   depositPerUnit?: number; // observed AH deposit in copper per unit (lost if it doesn't sell)
   bound?: boolean; // every copy you hold is soulbound: can't be sold on the AH
   bindType?: number; // game bind type: 1 pickup, 2 equip, 3 use, 4 quest, 7/8/9 account (warbound)
+  quality?: number; // 0 poor, 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary
 }
 
 /** Bind types that can never be listed on the AH: on pickup, quest, account/warbound. */
@@ -172,6 +173,7 @@ export interface Settings {
   observedCutPercent?: number;
   observedDepositRefunded?: boolean;
   auctionatorRealm?: string; // which realm's prices to use, when several
+  wowheadTooltips?: boolean; // item icons and tooltips from Wowhead; on unless set to false
 }
 
 /** Small key/value store for sync state (folder handle, last import). */

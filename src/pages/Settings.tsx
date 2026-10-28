@@ -12,6 +12,7 @@ import {
 
 const versionLabel = GAME_VERSIONS.find((v) => v.id === gameVersion)?.label ?? gameVersion;
 import { useCharacters, useSettings } from '../ui';
+import { useWowheadStatus } from '../wowhead';
 
 export function SettingsPage() {
   const settings = useSettings();
@@ -118,6 +119,8 @@ export function SettingsPage() {
         <AuctionatorRealm />
       </div>
 
+      <WowheadSettings />
+
       <div className="card">
         <h3>Characters</h3>
         <div className="table-wrap"><table>
@@ -183,6 +186,32 @@ export function SettingsPage() {
         </button>
       </div>
     </>
+  );
+}
+
+function WowheadSettings() {
+  const settings = useSettings();
+  const status = useWowheadStatus();
+  const on = settings.wowheadTooltips !== false;
+  return (
+    <div className="card">
+      <h3>Item icons and tooltips</h3>
+      <label className="row" style={{ alignItems: 'center' }}>
+        <input
+          type="checkbox"
+          checked={on}
+          onChange={(e) => void db.settings.put({ ...settings, wowheadTooltips: e.target.checked })}
+        />
+        Show item icons and tooltips from Wowhead
+        {on && status === 'ready' && <span className="badge good">active</span>}
+        {on && status === 'failed' && <span className="badge warn">blocked or offline</span>}
+      </label>
+      <p className="hint">
+        Uses Wowhead's official tooltip script. Your browser then contacts Wowhead, which sees your IP address and the
+        ids of the items on screen. No gold, ledger or character data is sent. Turning it off takes effect when you
+        reload the page. Ad blockers sometimes block it; item names still work as links.
+      </p>
+    </div>
   );
 }
 

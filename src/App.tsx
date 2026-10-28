@@ -13,7 +13,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useState, type ComponentType } from 'react';
+import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { GAME_VERSIONS, gameVersion, setGameVersion } from './db';
 import { Crafting } from './pages/Crafting';
 import { Goals } from './pages/Goals';
@@ -27,7 +27,9 @@ import { SettingsPage } from './pages/Settings';
 import { describeResult, Sync } from './pages/Sync';
 import { autoSync } from './sync/folder';
 import { ToastProvider, useToast } from './toast';
+import { useSettings } from './ui';
 import { useTodos } from './useTodos';
+import { WowheadProvider } from './wowhead';
 
 interface NavItem {
   path: string;
@@ -132,6 +134,12 @@ function NavLinks({ path, high, onPick }: { path: string; high: number; onPick?:
   );
 }
 
+/** Loads Wowhead tooltips unless switched off in Settings (on by default). */
+function WowheadGate({ children }: { children: ReactNode }) {
+  const settings = useSettings();
+  return <WowheadProvider enabled={settings.wowheadTooltips !== false}>{children}</WowheadProvider>;
+}
+
 function Shell() {
   const [path, setPath] = useState(currentPath);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -229,7 +237,9 @@ function Shell() {
 export function App() {
   return (
     <ToastProvider>
-      <Shell />
+      <WowheadGate>
+        <Shell />
+      </WowheadGate>
     </ToastProvider>
   );
 }

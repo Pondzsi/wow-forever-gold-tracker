@@ -6,7 +6,7 @@ GoldTrackerDB = {
 		[4306] = { ["n"] = "Silk Cloth", ["v"] = 37 },
 		[4305] = { ["n"] = "Bolt of Silk Cloth", ["v"] = 150 },
 		[4245] = { ["n"] = "Small Silk Pack", ["v"] = 500, ["b"] = false },
-		[2000] = { ["n"] = "Bound Gear |A:Professions-ChatIcon-Quality-12-Tier2:17:15::1|a", ["v"] = 900, ["b"] = true },
+		[2000] = { ["n"] = "Bound Gear |A:Professions-ChatIcon-Quality-12-Tier2:17:15::1|a", ["v"] = 900, ["b"] = true, ["q"] = 4 },
 		[21150] = { ["n"] = "Iron Bound Trunk" },
 		[6358] = { ["n"] = "Oily Blackmouth", ["v"] = 4 },
 	},

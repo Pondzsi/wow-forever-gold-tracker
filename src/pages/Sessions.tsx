@@ -26,6 +26,7 @@ import {
   EmptyState,
   Skeleton,
 } from '../ui';
+import { ItemLink } from '../wowhead';
 
 export function Sessions() {
   const sessionsQ = useLiveQuery(() => db.sessions.orderBy('start').reverse().toArray(), []);
@@ -413,7 +414,9 @@ function ActiveSession({
           <tbody>
             {looseItems.map((i) => (
               <tr key={i.id}>
-                <td>{items.byId.get(i.itemId)?.name}</td>
+                <td>
+                  <ItemLink item={items.byId.get(i.itemId)} />
+                </td>
                 <td className="num">×{i.count}</td>
                 <td className="num">
                   {prices.get(i.itemId) ? <Money copper={prices.get(i.itemId)!.copper * i.count} /> : <span className="muted small">no price</span>}
@@ -483,7 +486,9 @@ function ActiveSession({
               <tbody>
                 {opens.map((o) => (
                   <tr key={o.id}>
-                    <td>{items.byId.get(o.containerItemId)?.name}</td>
+                    <td>
+                      <ItemLink item={items.byId.get(o.containerItemId)} />
+                    </td>
                     <td className="small">
                       {o.copper > 0 && (
                         <>
@@ -491,10 +496,18 @@ function ActiveSession({
                           {', '}
                         </>
                       )}
-                      {sessionItems
-                        .filter((i) => i.containerOpenId === o.id)
-                        .map((i) => `${i.count}× ${items.byId.get(i.itemId)?.name}`)
-                        .join(', ') || <span className="muted">empty</span>}
+                      {sessionItems.some((i) => i.containerOpenId === o.id) ? (
+                        sessionItems
+                          .filter((i) => i.containerOpenId === o.id)
+                          .map((i, k) => (
+                            <span key={i.id}>
+                              {k ? ', ' : ''}
+                              {i.count}× <ItemLink item={items.byId.get(i.itemId)} />
+                            </span>
+                          ))
+                      ) : (
+                        <span className="muted">empty</span>
+                      )}
                     </td>
                     <td className="num">
                       <button
@@ -639,7 +652,9 @@ function FishingStats({
               ) : (
                 containers.map((c) => (
                   <tr key={c.containerItemId}>
-                    <td>{items.get(c.containerItemId)?.name}</td>
+                    <td>
+                      <ItemLink item={items.get(c.containerItemId)} />
+                    </td>
                     <td className="num">{c.opens}</td>
                     <td className="num">
                       <Money copper={Math.round(c.avgValue)} />

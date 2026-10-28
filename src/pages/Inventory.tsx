@@ -1,8 +1,18 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { isStale, vendorBeatsAH } from '../calc';
-import { bindLabel, db, getOrCreateItem, type InventoryLocation } from '../db';
+import { isStale, vendorBeatsAH, type PriceMap } from '../calc';
+import {
+  bindLabel,
+  db,
+  getOrCreateItem,
+  type Character,
+  type InventoryLocation,
+  type InventoryRow,
+  type Item,
+} from '../db';
+import { formatMoney } from '../money';
 import { CharacterSelect, charName, fmtAge, ItemField, Money, useCharacters, useItems, usePriceMap, useSettings, EmptyState, Skeleton } from '../ui';
+import { ItemLink, qualityClass } from '../wowhead';
 
 export function Inventory() {
   const characters = useCharacters();
@@ -17,6 +27,21 @@ export function Inventory() {
   const [itemName, setItemName] = useState('');
   const [count, setCount] = useState('1');
   const [view, setView] = useState<number | 'all'>('all');
+  const [mode, setMode] = useState<'bags' | 'list'>(() => {
+    try {
+      return localStorage.getItem('fgt-inventory-view') === 'list' ? 'list' : 'bags';
+    } catch {
+      return 'bags';
+    }
+  });
+  const chooseMode = (m: 'bags' | 'list') => {
+    setMode(m);
+    try {
+      localStorage.setItem('fgt-inventory-view', m);
+    } catch {
+      // Only a convenience: the default view is used next time.
+    }
+  };
 
   const countNum = Number(count);
   const valid = itemName.trim() !== '' && Number.isInteger(countNum) && countNum >= 0 && characterId !== 'all';
@@ -91,13 +116,29 @@ export function Inventory() {
 
       <div className="card">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <CharacterSelect value={view} onChange={setView} characters={characters} allowAll label="Show" />
-          <div style={{ marginBottom: 20 }}>
+          <div className="row">
+            <CharacterSelect value={view} onChange={setView} characters={characters} allowAll label="Show" />
+            <div className="segmented" role="group" aria-label="View">
+              {(['bags', 'list'] as const).map((m) => (
+                <button
+                  key={m}
+                  className={mode === m ? '' : 'secondary'}
+                  aria-pressed={mode === m}
+                  onClick={() => chooseMode(m)}
+                >
+                  {m === 'bags' ? 'Bags' : 'List'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
             Estimated value <Money copper={total} />
             {unpriced > 0 && <span className="warn small"> · {unpriced} item(s) without a price</span>}
           </div>
         </div>
-        {list.length === 0 ? (
+        {mode === 'bags' && list.length > 0 ? (
+          <BagView rows={visible} items={items.byId} prices={prices} characters={characters} />
+        ) : list.length === 0 ? (
           rowsQ === undefined ? (
           <Skeleton />
         ) : (
@@ -121,7 +162,7 @@ export function Inventory() {
                 return (
                   <tr key={g.itemId}>
                     <td>
-                      {items.byId.get(g.itemId)?.name}{' '}
+                      <ItemLink item={items.byId.get(g.itemId)} />{' '}
                       {bindLabel(items.byId.get(g.itemId)) && (
                         <span className="badge" title="Can't be sold on the AH">
                           {bindLabel(items.byId.get(g.itemId))}
@@ -146,5 +187,76 @@ export function Inventory() {
         )}
       </div>
     </>
+  );
+}
+
+const LOCATION_LABEL: Record<InventoryLocation, string> = { bags: 'Bags', bank: 'Bank' };
+
+/** Game-style bag grid per character and location: icon, stack count, quality border. */
+function BagView({
+  rows,
+  items,
+  prices,
+  characters,
+}: {
+  rows: InventoryRow[];
+  items: Map<number, Item>;
+  prices: PriceMap;
+  characters: Character[];
+}) {
+  const groups = new Map<string, InventoryRow[]>();
+  for (const r of rows) {
+    const key = `${r.characterId}|${r.location}`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  const value = (r: InventoryRow) => (prices.get(r.itemId)?.copper ?? 0) * r.count;
+  return (
+    <div className="bags">
+      {[...groups.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, list]) => {
+          const [cid, loc] = key.split('|');
+          const sorted = [...list].sort(
+            (a, b) => (items.get(b.itemId)?.quality ?? 1) - (items.get(a.itemId)?.quality ?? 1) || value(b) - value(a),
+          );
+          const total = list.reduce((s, r) => s + value(r), 0);
+          return (
+            <section key={key} className="bag">
+              <div className="bag-head">
+                <span>
+                  {charName(characters, Number(cid))} · {LOCATION_LABEL[loc as InventoryLocation]}
+                </span>
+                <span className="small muted">
+                  {list.length} slots · <Money copper={total} />
+                </span>
+              </div>
+              <div className="bag-grid">
+                {sorted.map((r) => {
+                  const item = items.get(r.itemId);
+                  const p = prices.get(r.itemId);
+                  const bound = bindLabel(item);
+                  const tip = [
+                    item?.name ?? '?',
+                    `×${r.count}`,
+                    p ? `${formatMoney(p.copper)} each` : 'no AH price',
+                    bound ?? '',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ');
+                  return (
+                    <div key={r.id} className={`bag-slot ${qualityClass(item)} ${bound ? 'bound' : ''}`} title={tip}>
+                      <ItemLink item={item} size="medium">
+                        <span className="slot-name">{item?.name ?? '?'}</span>
+                      </ItemLink>
+                      {r.count > 1 && <span className="slot-count">{r.count}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+      <p className="hint">Hover or tap an item for its tooltip. Dimmed items are bound and can't go on the AH.</p>
+    </div>
   );
 }

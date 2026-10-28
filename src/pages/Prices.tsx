@@ -16,6 +16,7 @@ import {
   useSettings,
   EmptyState,
 } from '../ui';
+import { ItemLink } from '../wowhead';
 import { deleteWithUndo, useToast } from '../toast';
 
 export function Prices() {
@@ -125,7 +126,9 @@ export function Prices() {
                     className={`clickable ${selected === i.id ? 'selected' : ''}`}
                     onClick={() => setSelected(i.id!)}
                   >
-                    <td>{i.name}</td>
+                    <td>
+                      <ItemLink item={i} />
+                    </td>
                     <td className="num">{p ? <Money copper={p.copper} /> : <span className="muted">none</span>}</td>
                     <td className={`small ${p && isStale(p, settings.staleDays) ? 'warn' : 'muted'}`}>
                       {p ? fmtAge(p.time) : ''}
@@ -171,7 +174,9 @@ export function Prices() {
 
       {selected !== null && (
         <div className="card">
-          <h3>Price history: {items.byId.get(selected)?.name}</h3>
+          <h3>
+            Price history: <ItemLink item={items.byId.get(selected)} size="medium" />
+          </h3>
           {history.length === 0 ? (
             <p className="muted">No prices recorded.</p>
           ) : (

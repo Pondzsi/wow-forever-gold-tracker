@@ -313,3 +313,71 @@ ol.steps { list-style: none; padding: 0; margin: 0 0 var(--s3); }
 }
 
 .money-xl { font-size: 32px; line-height: 36px; font-weight: 600; }
+
+/* ---------- Item names (quality colors) ---------- */
+
+.item-link { text-decoration: none; color: var(--text); }
+a.item-link:hover { text-decoration: underline; }
+.q0 { color: var(--q0) !important; }
+.q1 { color: var(--q1) !important; }
+.q2 { color: var(--q2) !important; }
+.q3 { color: var(--q3) !important; }
+.q4 { color: var(--q4) !important; }
+.q5 { color: var(--q5) !important; }
+
+/* ---------- Segmented switch ---------- */
+
+.segmented { display: inline-flex; }
+.segmented button { border-radius: 0; }
+.segmented button:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+.segmented button:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+
+/* ---------- Bag view (game-style slots) ---------- */
+
+.bags { display: grid; gap: var(--s4); margin-top: var(--s3); }
+.bag {
+  background: linear-gradient(180deg, #24201a, #1a1712);
+  border: 1px solid var(--trim);
+  border-radius: var(--r-md);
+  padding: var(--s3);
+  box-shadow: inset 0 0 0 1px #0d0b08, inset 0 1px 0 #8a7440;
+}
+.bag-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); flex-wrap: wrap;
+  font-family: var(--font-display); color: var(--accent); margin-bottom: var(--s2);
+}
+.bag-head .small { font-family: var(--font-body); }
+.bag-grid { display: grid; grid-template-columns: repeat(auto-fill, 44px); gap: 5px; }
+.bag-slot {
+  position: relative;
+  width: 44px; height: 44px;
+  border: 2px solid currentColor;
+  border-radius: var(--r-sm);
+  background: radial-gradient(circle at 50% 40%, #2e2922, #121010);
+  box-shadow: inset 0 0 6px #000;
+  overflow: hidden;
+  color: var(--q1);
+}
+.bag-slot.q1 { color: #6b6457 !important; } /* white items get a quiet grey frame, like in game */
+.bag-slot a { display: block; width: 100%; height: 100%; font-size: 0; text-decoration: none; color: inherit; }
+.bag-slot .slot-name {
+  display: flex; align-items: center; justify-content: center; height: 100%;
+  font-size: 9px; line-height: 1.05; padding: 2px; text-align: center; overflow: hidden; color: var(--muted);
+}
+/* When Wowhead has inserted the icon, the icon fills the slot and the name hides. */
+.bag-slot a[data-wh-icon-added] .slot-name { display: none; }
+.bag-slot .iconmedium, .bag-slot .iconsmall { display: block; width: 100%; height: 100%; float: none; margin: 0; }
+.bag-slot .iconmedium ins, .bag-slot .iconsmall ins {
+  display: block; position: static; width: 100%; height: 100%; background-size: cover !important; border-radius: 0;
+}
+.bag-slot .iconmedium del, .bag-slot .iconsmall del { display: none; }
+.bag-slot .slot-count {
+  position: absolute; right: 2px; bottom: 0;
+  font-size: 13px; font-weight: 700; color: #fff; pointer-events: none;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+}
+.bag-slot.bound::after {
+  content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); pointer-events: none;
+}
+.bag-slot:hover { filter: brightness(1.2); }
+.bag-slot:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
