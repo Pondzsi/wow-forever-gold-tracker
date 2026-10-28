@@ -1,4 +1,4 @@
-import { canSellOnAH, type ContainerOpen, type GoldSnapshot, type Item, type Price, type Recipe, type Session, type SessionItem } from './db';
+import { canMail, canSellOnAH, type Character, type ContainerOpen, type GoldSnapshot, type InventoryLocation, type InventoryRow, type Item, type Price, type Recipe, type Session, type SessionItem } from './db';
 
 export type PriceMap = Map<number, Price>;
 
@@ -306,4 +306,174 @@ export function decideHoldings(
     }
   }
   return out.sort((a, b) => b.best - a.best);
+}
+
+// ---------- Send to bank alt ----------
+
+export type SendAction = 'Send' | 'Send to sell' | 'Send, check AH there' | 'Vendor here' | 'Keep here';
+
+export const SEND_ACTIONS: SendAction[] = ['Send', 'Send to sell', 'Send, check AH there', 'Vendor here', 'Keep here'];
+
+export const isSend = (a: SendAction) => a.startsWith('Send');
+
+export interface SendRow {
+  characterId: number;
+  itemId: number;
+  count: number;
+  locations: InventoryLocation[];
+  action: SendAction;
+  reason: string;
+  value: number | null; // whole stack: AH net or vendor value; null when neither is known
+  stale: boolean;
+}
+
+export interface MailPlan {
+  stacks: number; // item slots to send (one per item type)
+  mails: number;
+  postage: number;
+  value: number; // value of the stacks to send
+  unpriced: number; // stacks to send with no value
+}
+
+export interface SenderPlan {
+  characterId: number;
+  rows: SendRow[];
+  plan: MailPlan;
+}
+
+export interface BankAltInput {
+  bankAltId: number;
+  characters: Character[];
+  inventory: InventoryRow[];
+  items: Map<number, Item>;
+  prices: PriceMap;
+  fees: Fees;
+  recipes: Recipe[];
+  staleDays: number;
+  postage: number; // copper per mail
+  itemsPerMail: number;
+  now?: number;
+}
+
+const knows = (c: Character, profession: string) =>
+  c.professions.some((p) => p.toLowerCase() === profession.toLowerCase());
+
+/**
+ * For every item held by a character other than the bank alt: mail it to the bank alt, or not.
+ * Order of rules:
+ * 1. Soulbound, quest and warbound items can't be mailed: left out.
+ * 2. Items marked "never send": keep here.
+ * 3. Materials of a profession the sender knows: keep here.
+ * 4. Materials of a recipe the bank alt knows, when crafting is its best option: send.
+ * 5. Otherwise the Sell list decision: sell on AH → send to sell, check AH → send and check there,
+ *    vendor → vendor here (no postage), keep → keep here.
+ * 6. A "send to sell" or "check AH" stack worth less than one slot's share of the postage
+ *    is vendored here instead, if a vendor pays anything.
+ */
+export function planBankAltMail(input: BankAltInput): SenderPlan[] {
+  const { bankAltId, characters, inventory, items, prices, fees, recipes, staleDays, now = Date.now() } = input;
+  const bankAlt = characters.find((c) => c.id === bankAltId);
+  if (!bankAlt) return [];
+  const perMail = Math.max(1, Math.floor(input.itemsPerMail));
+  const slotPostage = input.postage / perMail;
+  const name = (id: number) => items.get(id)?.name ?? `item #${id}`;
+
+  // Materials the bank alt should craft with: material -> product.
+  const altMats = new Map<number, number>();
+  for (const r of recipes) {
+    if (knows(bankAlt, r.profession) && evaluateRecipe(r, prices, items, fees).best?.verdict === 'Craft') {
+      for (const m of r.reagents) if (!altMats.has(m.itemId)) altMats.set(m.itemId, r.productItemId);
+    }
+  }
+
+  const out: SenderPlan[] = [];
+  for (const sender of characters) {
+    if (sender.id === undefined || sender.id === bankAltId) continue;
+
+    // One stack per item: bags and bank together.
+    const held = new Map<number, { count: number; locations: Set<InventoryLocation> }>();
+    for (const r of inventory) {
+      if (r.characterId !== sender.id || r.count <= 0 || !canMail(items.get(r.itemId))) continue;
+      const h = held.get(r.itemId) ?? { count: 0, locations: new Set() };
+      h.count += r.count;
+      h.locations.add(r.location);
+      held.set(r.itemId, h);
+    }
+    if (!held.size) continue;
+
+    // Materials of the sender's own professions: material -> profession.
+    const ownMats = new Map<number, string>();
+    for (const r of recipes) {
+      if (knows(sender, r.profession)) for (const m of r.reagents) if (!ownMats.has(m.itemId)) ownMats.set(m.itemId, r.profession);
+    }
+    // Recipes nobody here knows still count for the Sell list rules (e.g. a third character's).
+    const otherRecipes = recipes.filter((r) => !knows(sender, r.profession) && !knows(bankAlt, r.profession));
+    const counts = new Map([...held].map(([id, h]) => [id, h.count]));
+    const decided = new Map(
+      decideHoldings(counts, items, prices, fees, otherRecipes, staleDays, now).map((d) => [d.itemId, d]),
+    );
+
+    const rows: SendRow[] = [];
+    for (const [itemId, h] of held) {
+      const d = decided.get(itemId)!;
+      const known = d.ahNet !== null && d.vendor !== null ? Math.max(d.ahNet, d.vendor) : d.ahNet ?? d.vendor;
+      const base = {
+        characterId: sender.id,
+        itemId,
+        count: h.count,
+        locations: [...h.locations].sort(),
+        value: d.best > 0 ? d.best : known,
+        stale: d.stale,
+      };
+      const product = altMats.get(itemId);
+      const ownProfession = ownMats.get(itemId);
+      let row: SendRow;
+      if (items.get(itemId)?.keepOnCharacter) {
+        row = { ...base, action: 'Keep here', reason: 'Marked "never send"' };
+      } else if (ownProfession) {
+        row = { ...base, action: 'Keep here', reason: `Material for your ${ownProfession}` };
+      } else if (product !== undefined) {
+        row = { ...base, value: known, action: 'Send', reason: `For ${name(product)}: ${bankAlt.name} crafts it, crafting pays more` };
+      } else if (d.decision === 'Sell on AH') {
+        row = { ...base, action: 'Send to sell', reason: d.reason };
+      } else if (d.decision === 'Check AH') {
+        row = { ...base, action: 'Send, check AH there', reason: d.reason };
+      } else if (d.decision === 'Vendor') {
+        row = { ...base, action: 'Vendor here', reason: `${d.reason}: save the postage` };
+      } else {
+        row = { ...base, action: 'Keep here', reason: d.reason };
+      }
+      // Crafting materials are sent even when cheap: the bank alt would have to buy them otherwise.
+      if (
+        (row.action === 'Send to sell' || row.action === 'Send, check AH there') &&
+        row.value !== null &&
+        row.value < slotPostage &&
+        (d.vendor ?? 0) > 0
+      ) {
+        row = {
+          ...row,
+          value: d.vendor,
+          action: 'Vendor here',
+          reason: `Worth less than its share of the postage (${Math.round(slotPostage * 10) / 10}c per slot)`,
+        };
+      }
+      rows.push(row);
+    }
+
+    const sending = rows.filter((r) => isSend(r.action));
+    const mails = Math.ceil(sending.length / perMail);
+    rows.sort((a, b) => SEND_ACTIONS.indexOf(a.action) - SEND_ACTIONS.indexOf(b.action) || (b.value ?? 0) - (a.value ?? 0));
+    out.push({
+      characterId: sender.id,
+      rows,
+      plan: {
+        stacks: sending.length,
+        mails,
+        postage: mails * input.postage,
+        value: sending.reduce((s, r) => s + (r.value ?? 0), 0),
+        unpriced: sending.filter((r) => r.value === null).length,
+      },
+    });
+  }
+  return out;
 }

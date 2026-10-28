@@ -12,6 +12,7 @@ import {
 
 const versionLabel = GAME_VERSIONS.find((v) => v.id === gameVersion)?.label ?? gameVersion;
 import { useCharacters, useSettings } from '../ui';
+import { BankAltSettings } from './BankAlt';
 import { useWowheadStatus } from '../wowhead';
 
 export function SettingsPage() {
@@ -120,6 +121,8 @@ export function SettingsPage() {
       </div>
 
       <WowheadSettings />
+
+      <BankAltSettings />
 
       <div className="card">
         <h3>Characters</h3>

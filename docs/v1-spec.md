@@ -190,6 +190,28 @@ Goal: no manual forms where the game can supply the data.
 - Recipes can only be read with a profession window open, so that check passes on the functions alone
   and asks for a second `/gt check` with the window open.
 
+## 9d. Send to bank alt (2026-10-28)
+
+Goal: tell the gathering character which items to mail to the bank alt, which stores, sells and crafts.
+
+- **Settings:** the bank alt character (`settings.bankAltCharacterId`), postage per mail
+  (`mailPostage`, default 30 copper, the Classic value) and items per mail (`itemsPerMail`, default 12,
+  the retail value). Both defaults are unverified for Forever.
+- **Never send:** `items.keepOnCharacter`, a toggle per item on the page (potions, food, poisons).
+- **Rules** (`planBankAltMail` in `src/calc.ts`), per item held by each other character, bags and bank together:
+  1. Soulbound, quest and warbound items can't be mailed: left out.
+  2. Marked "never send": **Keep here**.
+  3. Material of a recipe in a profession the sender knows: **Keep here**.
+  4. Material of a recipe the bank alt knows, when crafting is its best option: **Send**.
+  5. Otherwise the Sell list decision: Sell on AH → **Send to sell**, Check AH → **Send, check AH there**,
+     Vendor → **Vendor here** (no postage), Keep → **Keep here**.
+  6. A "send to sell" or "check AH" stack worth less than one slot's share of the postage
+     (postage ÷ items per mail) is vendored here when a vendor pays. Crafting materials are always sent.
+- **Mail plan** per sender: stacks to send, mails = ⌈stacks ÷ items per mail⌉, total postage, value sent.
+  Each item type counts as one slot; the game's maximum stack size is not known yet.
+- After the items are mailed and synced, they are in the bank alt's inventory and leave the list.
+- Overview shows a tile with the stacks and value to send.
+
 ## 10. Milestones
 
 1. **M1 — Manual dashboard (before launch).**
@@ -210,6 +232,7 @@ Goal: no manual forms where the game can supply the data.
 - [ ] Whether gold events fire normally during all activities.
 - [ ] The game's install folder and `WTF` path for Forever.
 - [ ] Fishing mechanics claimed in beta videos: Lure Master talent, fish rack buff, trunks in pools.
+- [ ] Mail postage per mail (assumed 30 copper) and items per mail (assumed 12).
 
 ## 12. Install and setup
 

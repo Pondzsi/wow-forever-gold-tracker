@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Hammer,
   Home,
+  Mail,
   RefreshCw,
   Scale,
   Settings as SettingsIcon,
@@ -17,6 +18,7 @@ import {
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { GAME_VERSIONS, gameVersion, setGameVersion } from './db';
 import { ErrorBoundary } from './ErrorBoundary';
+import { BankAlt } from './pages/BankAlt';
 import { Crafting } from './pages/Crafting';
 import { Goals } from './pages/Goals';
 import { Inventory } from './pages/Inventory';
@@ -48,6 +50,7 @@ const NAV: NavItem[] = [
   { path: 'ledger', label: 'Ledger', icon: BookOpen, group: 'Money', component: Ledger, mobile: true },
   { path: 'goals', label: 'Goals', icon: Target, group: 'Money', component: Goals },
   { path: 'sell', label: 'Sell list', icon: Coins, group: 'Market', component: SellList, mobile: true },
+  { path: 'bank-alt', label: 'Send to bank alt', icon: Mail, group: 'Market', component: BankAlt },
   { path: 'prices', label: 'Prices', icon: Scale, group: 'Market', component: Prices },
   { path: 'inventory', label: 'Inventory', icon: Backpack, group: 'Market', component: Inventory },
   { path: 'crafting', label: 'Crafting', icon: Hammer, group: 'Market', component: Crafting },

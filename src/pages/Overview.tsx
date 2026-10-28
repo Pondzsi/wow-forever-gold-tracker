@@ -20,6 +20,7 @@ import {
   useSettings,
 } from '../ui';
 import { useTodos } from '../useTodos';
+import { useBankAltPlans } from './BankAlt';
 import { describeResult, ValueBadge } from './Sync';
 
 const DAY = 86_400_000;
@@ -94,6 +95,7 @@ export function Overview() {
             {toSell.length} item(s) for the AH · {toVendor.length} to vendor (<Money copper={sum(toVendor)} />)
           </div>
         </a>
+        {characters.length > 1 && <BankAltTile />}
       </div>
 
       {todos.length > 0 && (
@@ -276,6 +278,33 @@ function SyncStatus({ lastSync, connected }: { lastSync?: number; connected: boo
         </>
       )}
     </div>
+  );
+}
+
+function BankAltTile() {
+  const data = useBankAltPlans();
+  if (!data) return null;
+  if (!data.bankAlt) {
+    return (
+      <a className="card stat-link" href="#/bank-alt">
+        <div className="muted small">Send to bank alt</div>
+        <div className="small">Choose your bank alt to see what your other characters should mail to it.</div>
+      </a>
+    );
+  }
+  const stacks = data.plans.reduce((s, p) => s + p.plan.stacks, 0);
+  const value = data.plans.reduce((s, p) => s + p.plan.value, 0);
+  const mails = data.plans.reduce((s, p) => s + p.plan.mails, 0);
+  return (
+    <a className="card stat-link" href="#/bank-alt">
+      <div className="muted small">To send to {data.bankAlt.name}</div>
+      <div className="stat">
+        <Money copper={value} />
+      </div>
+      <div className="small muted">
+        {stacks} stack(s) · {mails} mail(s)
+      </div>
+    </a>
   );
 }
 
