@@ -117,6 +117,9 @@ export function Inventory() {
                   <tr key={g.itemId}>
                     <td>
                       {items.byId.get(g.itemId)?.name}{' '}
+                      {items.byId.get(g.itemId)?.bound && (
+                        <span className="badge" title="Soulbound: can't be sold on the AH">bound</span>
+                      )}{' '}
                       {items.byId.get(g.itemId) && vendorBeatsAH(items.byId.get(g.itemId)!, p, settings) && (
                         <span className="badge Vendor">Vendor it</span>
                       )}

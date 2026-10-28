@@ -46,6 +46,7 @@ export interface Item {
   gameItemId?: number; // filled in later by the addon
   vendorPrice?: number; // copper per unit, when known
   depositPerUnit?: number; // observed AH deposit in copper per unit (lost if it doesn't sell)
+  bound?: boolean; // every copy you hold is soulbound: can't be sold on the AH
 }
 
 export type InventoryLocation = 'bags' | 'bank';

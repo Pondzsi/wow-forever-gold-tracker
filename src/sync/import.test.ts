@@ -52,6 +52,8 @@ describe('GoldTracker import', () => {
     expect(settings?.observedDepositRefunded).toBe(true);
     const pack = await db.items.where({ gameItemId: 4245 }).first();
     expect(pack?.depositPerUnit).toBe(60);
+    expect(pack?.bound).toBe(false);
+    expect(await db.items.where({ gameItemId: 2000 }).first()).toMatchObject({ name: 'Bound Gear (tier 2)', bound: true });
 
     const [session] = await db.sessions.toArray();
     expect(session).toMatchObject({ type: 'fishing', catches: 40, fishingSkillStart: 75, fishingSkillEnd: 80 });

@@ -47,6 +47,20 @@ describe('buildTodos', () => {
     expect(t.items).toEqual(['Heavy Leather ×10', 'Silk Cloth ×20']);
   });
 
+  it('leaves soulbound items out', () => {
+    const withBound = new Map(items);
+    withBound.set(3, { ...items.get(3)!, bound: true });
+    const t = buildTodos({
+      ...base,
+      items: withBound,
+      inventory: [
+        { characterId: 1, location: 'bags', itemId: 1, count: 20, updated: 0 },
+        { characterId: 1, location: 'bank', itemId: 3, count: 10, updated: 0 },
+      ],
+    }).find((x) => x.title.includes('have no AH price'))!;
+    expect(t.items).toEqual(['Silk Cloth ×20']);
+  });
+
   it('lists recipe items without prices', () => {
     const t = buildTodos({
       ...base,

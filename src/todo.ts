@@ -72,16 +72,17 @@ export function buildTodos(input: TodoInput): Todo[] {
   const held = new Map<number, number>();
   for (const r of inventory) held.set(r.itemId, (held.get(r.itemId) ?? 0) + r.count);
   const unpriced = [...held.entries()]
-    .filter(([id]) => !prices.get(id) && (items.get(id)?.vendorPrice ?? 0) > 0)
+    // Soulbound items can't be listed, so they never need an AH price.
+    .filter(([id]) => !prices.get(id) && !items.get(id)?.bound && (items.get(id)?.vendorPrice ?? 0) > 0)
     .map(([id, count]) => ({ id, count, weight: count * (items.get(id)?.vendorPrice ?? 0) }))
     .sort((a, b) => b.weight - a.weight);
   if (unpriced.length) {
     const big = unpriced.some((u) => u.weight >= 10_000);
     todos.push({
       value: big ? 'High' : 'Medium',
-      title: `${unpriced.length} item(s) in your bags or bank have no AH price`,
-      why: 'You can\'t tell whether to sell, vendor or keep them. Sorted by vendor value × count.',
-      how: 'Search them in the AH with Auctionator (or a full scan). Nothing to type.',
+      title: `${unpriced.length} sellable item(s) in your bags or bank have no AH price`,
+      why: 'You can\'t tell whether to sell, vendor or keep them. Sorted by vendor value × count. Soulbound items are left out.',
+      how: 'Search them in the AH with Auctionator. If nobody lists them, the AH has no price: vendor or keep them.',
       items: unpriced.slice(0, TOP).map((u) => `${name(u.id)} ×${u.count}`),
     });
   }

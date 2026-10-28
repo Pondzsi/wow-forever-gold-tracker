@@ -88,15 +88,27 @@ local function containerSlots(bag)
   return try(GetContainerNumSlots, bag) or 0
 end
 
--- Returns itemID, count, link for one slot.
+-- Whether the item in a slot is soulbound (can't be sold on the AH).
+local function slotBound(bag, slot)
+  if C_Item and C_Item.IsBound and ItemLocation and ItemLocation.CreateFromBagAndSlot then
+    local loc = try(ItemLocation.CreateFromBagAndSlot, ItemLocation, bag, slot)
+    if loc then return try(C_Item.IsBound, loc) end
+  end
+end
+
+-- Returns itemID, count, link, isBound for one slot.
 local function containerItem(bag, slot)
   if C_Container and C_Container.GetContainerItemInfo then
     local info = try(C_Container.GetContainerItemInfo, bag, slot)
-    if info and info.itemID then return info.itemID, info.stackCount or 1, info.hyperlink end
+    if info and info.itemID then
+      local bound = info.isBound
+      if bound == nil then bound = slotBound(bag, slot) end
+      return info.itemID, info.stackCount or 1, info.hyperlink, bound
+    end
     return
   end
   local _, count, _, _, _, _, link, _, _, id = try(GetContainerItemInfo, bag, slot)
-  if id then return id, count or 1, link end
+  if id then return id, count or 1, link, slotBound(bag, slot) end
 end
 
 local function bagIds()
@@ -120,16 +132,21 @@ local function bankIds()
 end
 
 local function readContainers(ids)
-  local out = {}
+  local out, allBound = {}, {}
   for _, bag in ipairs(ids) do
     for slot = 1, containerSlots(bag) do
-      local id, count, link = containerItem(bag, slot)
+      local id, count, link, bound = containerItem(bag, slot)
       if id and not secret(id) then
         out[id] = (out[id] or 0) + (count or 1)
         noteItem(id, link)
+        if bound ~= nil and not secret(bound) then
+          -- Bound only if every copy is bound; one unbound copy can still be sold.
+          allBound[id] = (allBound[id] ~= false) and (bound and true or false)
+        end
       end
     end
   end
+  for id, b in pairs(allBound) do db.items[id].b = b end
   return out
 end
 
