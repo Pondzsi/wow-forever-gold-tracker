@@ -478,6 +478,168 @@ local function onLootClosed()
 end
 
 -------------------------------------------------------------------------------
+-- Health check: which data sources work in this client (/gt check)
+-------------------------------------------------------------------------------
+
+local HEARTHSTONE = 6948
+
+-- Names of the given global functions that don't exist. "C_Item.IsBound" style names look inside tables.
+local function missingFns(names)
+  local out = {}
+  for _, full in ipairs(names) do
+    local v = _G
+    for part in full:gmatch("[^%.]+") do v = type(v) == "table" and v[part] or nil end
+    if type(v) ~= "function" then out[#out + 1] = full end
+  end
+  return out
+end
+
+local function fnsCheck(names, okText)
+  local miss = missingFns(names)
+  if #miss > 0 then return false, "missing: " .. table.concat(miss, ", ") end
+  return true, okText
+end
+
+-- First readable item in the bags: bag, slot, itemID.
+local function firstBagItem()
+  for _, bag in ipairs(bagIds()) do
+    for slot = 1, containerSlots(bag) do
+      local id = containerItem(bag, slot)
+      if id and not secret(id) then return bag, slot, id end
+    end
+  end
+end
+
+local function itemInfoFor(itemID)
+  local name, _, quality, _, _, _, _, _, _, _, sell, _, _, bindType = try(GetItemInfoFn, itemID)
+  local miss = {}
+  if name == nil or secret(name) then miss[#miss + 1] = "name" end
+  if quality == nil or secret(quality) then miss[#miss + 1] = "quality" end
+  if sell == nil or secret(sell) then miss[#miss + 1] = "sell price" end
+  if bindType == nil or secret(bindType) then miss[#miss + 1] = "bind type" end
+  return name, miss
+end
+
+-- Each check only reads. It returns ok, detail. Errors are caught by runHealthCheck.
+local HEALTH_CHECKS = {
+  { "gold", function()
+    if type(GetMoney) ~= "function" then return false, "GetMoney is missing" end
+    local m = GetMoney()
+    if secret(m) then return false, "gold is hidden (secret value)" end
+    if type(m) ~= "number" then return false, "GetMoney returned " .. type(m) end
+    return true, "gold is readable"
+  end },
+  { "bags", function()
+    local n = containerSlots(0)
+    if secret(n) then return false, "backpack size is hidden (secret value)" end
+    if not n or n <= 0 then return false, "backpack size could not be read" end
+    local bag, slot = firstBagItem()
+    if not bag then return false, ("backpack has %d slots, but no item could be read (bags empty?)"):format(n) end
+    return true, ("backpack has %d slots, item in bag %d slot %d is readable"):format(n, bag, slot)
+  end },
+  { "itemInfo", function()
+    local name, miss = itemInfoFor(HEARTHSTONE)
+    local what = "Hearthstone"
+    if #miss > 0 then
+      local _, _, id = firstBagItem()
+      if id then
+        name, miss = itemInfoFor(id)
+        what = "item " .. id
+      end
+    end
+    if #miss == 4 then return false, "no item data (it may still be loading: run /gt check again)" end
+    if #miss > 0 then return false, what .. ": missing " .. table.concat(miss, ", ") end
+    return true, ("name, quality, sell price and bind type read for %s"):format(name or what)
+  end },
+  { "bound", function()
+    local bag, slot = firstBagItem()
+    if bag and C_Container and C_Container.GetContainerItemInfo then
+      local info = try(C_Container.GetContainerItemInfo, bag, slot)
+      if info and type(info.isBound) == "boolean" then return true, "isBound is in the bag slot info" end
+    end
+    if bag then
+      local b = slotBound(bag, slot)
+      if type(b) == "boolean" then return true, "C_Item.IsBound works" end
+      return false, "bag slot info has no isBound and C_Item.IsBound gave no answer"
+    end
+    return fnsCheck({ "C_Item.IsBound", "ItemLocation.CreateFromBagAndSlot" }, "C_Item.IsBound is present (no bag item to test)")
+  end },
+  { "professions", function()
+    local names = {}
+    for name in pairs(readSkills()) do names[#names + 1] = name end
+    if #names == 0 then return false, "no professions found (none learned, or the game hides them)" end
+    table.sort(names)
+    return true, table.concat(names, ", ")
+  end },
+  { "recipes", function()
+    if C_TradeSkillUI and C_TradeSkillUI.GetAllRecipeIDs and C_TradeSkillUI.GetRecipeSchematic then
+      local ids = try(C_TradeSkillUI.GetAllRecipeIDs)
+      if type(ids) == "table" and #ids > 0 then return true, ("%d recipes readable in the open profession window"):format(#ids) end
+      return true, "functions present; open a profession window and run /gt check again to test a real read"
+    end
+    if GetNumTradeSkills and GetTradeSkillItemLink then
+      return true, "classic recipe functions present; open a profession window and run /gt check again"
+    end
+    return false, "missing: C_TradeSkillUI.GetAllRecipeIDs / GetRecipeSchematic"
+  end },
+  { "mail", function()
+    return fnsCheck({ "GetInboxNumItems", "GetInboxHeaderInfo", "GetInboxInvoiceInfo" }, "mail and AH invoice functions present")
+  end },
+  { "loot", function()
+    return fnsCheck({ "GetNumLootItems", "GetLootSlotLink", "GetLootSourceInfo", "IsFishingLoot", "C_Item.GetItemIDByGUID" },
+      "loot, fishing and container functions present")
+  end },
+  { "itemUseHook", function()
+    if type(hooksecurefunc) ~= "function" then return false, "hooksecurefunc is missing" end
+    if C_Container and type(C_Container.UseContainerItem) == "function" then return true, "C_Container.UseContainerItem can be hooked" end
+    if type(UseContainerItem) == "function" then return true, "UseContainerItem can be hooked" end
+    return false, "missing: C_Container.UseContainerItem and UseContainerItem"
+  end },
+  { "zone", function()
+    local z = try(GetRealZoneText)
+    if secret(z) then return false, "zone name is hidden (secret value)" end
+    if type(z) ~= "string" or z == "" then return false, "GetRealZoneText returned no name" end
+    return true, z
+  end },
+  { "timers", function()
+    return fnsCheck({ "C_Timer.After", "C_Timer.NewTicker" }, "C_Timer.After and NewTicker present")
+  end },
+}
+
+-- Tests every data source and saves the result in GoldTrackerDB.health.
+local function runHealthCheck(loud)
+  if not db then return end
+  local checks, okCount = {}, 0
+  for _, c in ipairs(HEALTH_CHECKS) do
+    local res = { pcall(c[2]) }
+    local ok, detail = res[2], res[3]
+    if not res[1] then ok, detail = false, "error: " .. tostring(res[2]) end
+    ok = ok and true or false
+    if type(detail) ~= "string" or secret(detail) then detail = "" end
+    checks[c[1]] = { ok = ok, detail = detail }
+    if ok then okCount = okCount + 1 end
+  end
+  local version, build, _, iface = try(GetBuildInfo)
+  local metadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+  db.health = {
+    t = time(),
+    client = iface,
+    build = version and (version .. "." .. tostring(build)) or nil,
+    addonVersion = try(metadata, ADDON_NAME, "Version"),
+    checks = checks,
+    lastError = db.lastError,
+  }
+  if loud then
+    print(("|cffffd100Gold Tracker check:|r %d of %d OK. Type /reload to save."):format(okCount, #HEALTH_CHECKS))
+    for _, c in ipairs(HEALTH_CHECKS) do
+      local r = checks[c[1]]
+      if not r.ok then say("|cffff6060" .. c[1] .. "|r: " .. r.detail) end
+    end
+    if db.lastError then say("Last error: " .. db.lastError) end
+  end
+end
+
+-------------------------------------------------------------------------------
 -- Setup
 -------------------------------------------------------------------------------
 
@@ -517,6 +679,8 @@ function handlers.PLAYER_LOGIN()
     snapshotBags()
     checkSkills()
   end)
+  -- Silent health check once per login, so the dashboard always has fresh results.
+  C_Timer.After(10, function() pcall(runHealthCheck, false) end)
   C_Timer.NewTicker(60, function()
     local s = char.session
     if s and s.auto and time() - s.last > FISHING_IDLE_SECONDS then stopSession("no catches for 15 min") end
@@ -602,11 +766,13 @@ SlashCmdList.GOLDTRACKER = function(msg)
       say(("%s session in %s, %d min, %d catches."):format(s.type, s.zone, math.floor((time() - s.start) / 60), s.catches))
     end
     if db.lastError then say("Last error: " .. db.lastError) end
+  elseif cmd == "check" then
+    runHealthCheck(true)
   elseif cmd == "sync" then
     say("Saving data for the dashboard...")
     ReloadUI()
   else
-    say("/gt start farming | /gt start fishing | /gt stop | /gt status | /gt sync (reload to save data now)")
+    say("/gt start farming | /gt start fishing | /gt stop | /gt status | /gt check | /gt sync (reload to save data now)")
     say("Fishing sessions start by themselves on your first catch.")
   end
 end

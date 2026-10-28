@@ -203,6 +203,7 @@ tr.selected td { background: var(--panel-2); }
 }
 .badge.Craft, .badge.good { color: var(--good); border-color: var(--good); }
 .badge.Sell { color: var(--link); border-color: var(--link); }
+.badge.bad { color: var(--bad); border-color: var(--bad); }
 .badge.Vendor, .badge.warn { color: var(--warn); border-color: var(--warn); }
 .badge.count { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; min-width: 20px; text-align: center; }
 

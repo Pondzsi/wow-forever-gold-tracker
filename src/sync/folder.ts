@@ -6,7 +6,7 @@ import { importGoldTracker, type ImportReport } from './importAddon';
 import { parseSavedVariables, parseSavedVariablesBytes, utf8Strings } from './luaParse';
 
 /** Raise when the importers change, so existing users re-read their files once. */
-const IMPORT_VERSION = 2;
+const IMPORT_VERSION = 3;
 
 const SKIP_DIRS =new Set(['data', 'cache', 'logs', 'errors', 'screenshots', 'interface', 'utils', 'fonts']);
 const FILES = ['GoldTracker.lua', 'Auctionator.lua'] as const;
