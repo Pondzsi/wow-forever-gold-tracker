@@ -1,0 +1,28 @@
+{
+  "name": "wow-forever-gold-tracker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "dexie": "4.0.11",
+    "dexie-react-hooks": "1.1.7",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "recharts": "2.15.1"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "@vitejs/plugin-react": "5.2.0",
+    "typescript": "5.7.3",
+    "vite": "7.3.7",
+    "vitest": "4.1.12"
+  }
+}
