@@ -28,9 +28,41 @@ export function folderAccessSupported(): boolean {
 
 export async function chooseWowFolder(): Promise<void> {
   const picker = (window as unknown as { showDirectoryPicker: (o: object) => Promise<DirHandle> }).showDirectoryPicker;
-  const dir = await picker({ id: 'wow-folder', mode: 'read' });
+  // Opens in Documents, where setup.bat puts the ForeverGoldTracker folder.
+  const dir = await picker({ id: 'wow-folder', mode: 'read', startIn: 'documents' });
   await db.meta.put({ key: 'wowFolder', value: dir });
   await db.meta.delete('filePaths');
+}
+
+/** Per-file sync state, for the setup checklist. */
+export interface FileStatus {
+  found: boolean; // seen in the chosen folder on the last sync
+  imported: number | null; // when its data was last imported
+  hasData: boolean; // the last import contained real data (events or prices)
+}
+
+export async function fileStatus(name: 'GoldTracker.lua' | 'Auctionator.lua'): Promise<FileStatus> {
+  const [missing, imported, modified, hasData] = await Promise.all([
+    db.meta.get('lastMissing'),
+    db.meta.get(`imported:${name}`),
+    db.meta.get(`modified:${name}`), // set by earlier versions too
+    db.meta.get(`hasData:${name}`),
+  ]);
+  const missingList = (missing?.value as string[] | undefined) ?? null;
+  const when = ((imported?.value ?? modified?.value) as number | undefined) ?? null;
+  let data = !!hasData?.value;
+  if (!data && when !== null) {
+    // Data imported before this flag existed.
+    data =
+      name === 'GoldTracker.lua'
+        ? (await db.characters.count()) > 0
+        : (await db.prices.filter((p) => p.source === 'import').count()) > 0;
+  }
+  return {
+    found: when !== null || (missingList !== null && !missingList.includes(name)),
+    imported: when,
+    hasData: data,
+  };
 }
 
 export async function getFolder(): Promise<DirHandle | undefined> {
@@ -88,10 +120,18 @@ async function lastModifiedSeen(name: string): Promise<number> {
 /** Imports a file's contents. Used by folder sync and by manual file upload. */
 export async function importFile(name: string, text: string): Promise<Partial<SyncResult>> {
   const saved = parseSavedVariables(text);
-  if (saved.GoldTrackerDB) return { addon: await importGoldTracker(saved) };
+  if (saved.GoldTrackerDB) {
+    const addon = await importGoldTracker(saved);
+    await db.meta.put({ key: 'imported:GoldTracker.lua', value: Date.now() });
+    if (addon.characters.length) await db.meta.put({ key: 'hasData:GoldTracker.lua', value: true });
+    return { addon };
+  }
   if (saved.AUCTIONATOR_PRICE_DATABASE) {
     const settings = await db.settings.get('main');
-    return { auctionator: await importAuctionator(saved, settings?.auctionatorRealm) };
+    const auctionator = await importAuctionator(saved, settings?.auctionatorRealm);
+    await db.meta.put({ key: 'imported:Auctionator.lua', value: Date.now() });
+    if (auctionator.realm) await db.meta.put({ key: 'hasData:Auctionator.lua', value: true });
+    return { auctionator };
   }
   throw new Error(`${name} has no GoldTrackerDB or AUCTIONATOR_PRICE_DATABASE.`);
 }
@@ -123,6 +163,7 @@ export async function syncFromFolder(force = false): Promise<SyncResult> {
     await db.meta.put({ key: `modified:${name}`, value: file.lastModified });
   }
   await db.meta.put({ key: 'lastSync', value: Date.now() });
+  await db.meta.put({ key: 'lastMissing', value: result.missing });
   return result;
 }
 

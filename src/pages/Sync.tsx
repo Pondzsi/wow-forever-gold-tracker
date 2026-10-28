@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { db } from '../db';
 import {
   chooseWowFolder,
+  fileStatus,
   folderAccessSupported,
   folderPermission,
   importFile,
@@ -41,7 +42,18 @@ export function Sync() {
   const folderName = useLiveQuery(async () => ((await db.meta.get('wowFolder'))?.value as { name?: string })?.name, [lastSync]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const noFile = { found: false, imported: null, hasData: false };
+  const gt = useLiveQuery(() => fileStatus('GoldTracker.lua'), [lastSync]) ?? noFile;
+  const atr = useLiveQuery(() => fileStatus('Auctionator.lua'), [lastSync]) ?? noFile;
+
+  const connected = permission === 'granted' || permission === 'prompt';
+  const doneList = [atr.found, gt.found, connected, gt.hasData, atr.hasData];
+  const allDone = doneList.every(Boolean);
+  // Auctionator can only be detected once the folder is connected, so it doesn't hold up the steps before that.
+  const checkable = [atr.found || !gt.hasData, gt.found, connected, gt.hasData, atr.hasData];
+  const current = checkable.findIndex((d) => !d) + 1; // 0 when all done
 
   async function run(action: () => Promise<string>) {
     setBusy(true);
@@ -86,46 +98,77 @@ export function Sync() {
         <h3>Game data</h3>
         {folderAccessSupported() ? (
           <>
-            <p style={{ marginTop: 0 }}>
-              {permission === 'none' || permission === undefined ? (
-                <span className="warn">No WoW folder connected.</span>
-              ) : (
-                <>
-                  Folder: <b>{folderName}</b> ·{' '}
-                  {permission === 'granted' ? (
-                    <span className="good">access allowed, syncs when you switch to this tab</span>
-                  ) : (
-                    <span className="warn">access needs a click on "Sync now"</span>
-                  )}
-                </>
-              )}
-              {lastSync ? <span className="muted"> · last sync {fmtAge(lastSync)}</span> : null}
-            </p>
-            <div className="row">
-              {permission !== 'none' && permission !== undefined && (
+            {allDone && !showSteps ? (
+              <div className="row" style={{ alignItems: 'center' }}>
+                <span className="good">✓ Connected to {folderName}</span>
+                <span className="muted small">
+                  syncs when you switch to this tab{lastSync ? ` · last sync ${fmtAge(lastSync)}` : ''}
+                </span>
                 <button onClick={() => void syncNow()} disabled={busy}>
                   Sync now
                 </button>
-              )}
-              <button className={permission === 'none' ? '' : 'secondary'} onClick={() => void connect()} disabled={busy}>
-                {permission === 'none' || permission === undefined ? 'Choose WoW folder…' : 'Change folder…'}
-              </button>
-              <button className="secondary" onClick={() => fileRef.current?.click()} disabled={busy}>
-                Import files manually…
-              </button>
-            </div>
-            <p className="hint">
-              First run <b>setup.bat</b> once (download below). Then choose the folder{' '}
-              <code>Documents\ForeverGoldTracker</code>. Setup keeps a copy of the game's save files there, because
-              browsers may not open folders inside Program Files. If WoW is installed elsewhere, you can choose the{' '}
-              <b>World of Warcraft</b> folder directly. WoW saves when you log out or type <code>/gt sync</code>.
-            </p>
-            <p className="hint">
-              <a href="./ForeverGoldTracker-setup.zip" download>
-                Download setup (addon + setup.bat)
-              </a>{' '}
-              · unzip it, double-click <b>setup.bat</b>. Run it again later to update the addon.
-            </p>
+                <button className="link" style={{ color: 'var(--accent)' }} onClick={() => setShowSteps(true)}>
+                  setup steps
+                </button>
+              </div>
+            ) : (
+              <>
+                <ol className="steps">
+                  <Step n={1} done={atr.found} current={current === 1} title="Install Auctionator in WoW">
+                    From CurseForge or Wago. It provides the Auction House prices.
+                    {gt.hasData && !atr.found
+                      ? ' Auctionator.lua was not found yet: install it, log in once, then /gt sync.'
+                      : ' This turns green after step 4.'}
+                  </Step>
+                  <Step n={2} done={gt.found} current={current === 2} title="Download the setup and run setup.bat">
+                    <a className="button" href="./ForeverGoldTracker-setup.zip" download>
+                      Download setup
+                    </a>{' '}
+                    Unzip it and double-click <b>setup.bat</b>. Press Enter to track <code>_forever_</code> (or pick
+                    another game version). It installs the addon and creates <code>Documents\ForeverGoldTracker</code>.
+                  </Step>
+                  <Step n={3} done={connected} current={current === 3} title="Connect the folder">
+                    {permission === 'prompt' ? (
+                      <button onClick={() => void syncNow()} disabled={busy}>
+                        Allow access again
+                      </button>
+                    ) : (
+                      <button onClick={() => void connect()} disabled={busy}>
+                        {connected ? 'Change folder…' : 'Choose folder…'}
+                      </button>
+                    )}{' '}
+                    In the window: <b>Documents</b> → <b>ForeverGoldTracker</b> → <b>Select Folder</b>, then{' '}
+                    <b>Allow on every visit</b>.
+                  </Step>
+                  <Step n={4} done={gt.hasData} current={current === 4} title="Log in to WoW, then save">
+                    Play as usual. Type <code>/gt sync</code> in chat (or log out) to save. Switch back to this tab:
+                    your characters appear by themselves.
+                  </Step>
+                  <Step n={5} done={atr.hasData} current={current === 5} title="Scan the Auction House">
+                    At the AH, open the Auctionator tab and run a full scan. Then <code>/gt sync</code> again.
+                  </Step>
+                </ol>
+                <div className="row">
+                  {connected && (
+                    <button className="secondary" onClick={() => void syncNow()} disabled={busy}>
+                      Sync now
+                    </button>
+                  )}
+                  {allDone && (
+                    <button className="link" style={{ color: 'var(--accent)' }} onClick={() => setShowSteps(false)}>
+                      hide steps
+                    </button>
+                  )}
+                  <button className="link" style={{ color: 'var(--muted)' }} onClick={() => fileRef.current?.click()}>
+                    import files by hand instead…
+                  </button>
+                </div>
+                <p className="hint">
+                  Why a copy in Documents: browsers can't open folders inside Program Files, where WoW is usually
+                  installed. setup.bat's background copier keeps the copy up to date.
+                </p>
+              </>
+            )}
           </>
         ) : (
           <>
@@ -213,6 +256,30 @@ export function Sync() {
         </p>
       </div>
     </>
+  );
+}
+
+function Step({
+  n,
+  done,
+  current,
+  title,
+  children,
+}: {
+  n: number;
+  done: boolean;
+  current: boolean;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className={`step ${done ? 'done' : ''} ${current ? 'current' : ''}`}>
+      <span className="step-mark">{done ? '✓' : n}</span>
+      <div>
+        <div className="step-title">{title}</div>
+        {!done || current ? <div className="small muted step-body">{children}</div> : null}
+      </div>
+    </li>
   );
 }
 

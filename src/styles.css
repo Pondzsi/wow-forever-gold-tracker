@@ -116,6 +116,27 @@ tr.selected td { background: var(--panel-2); }
 .bar > div { height: 100%; background: var(--gold); }
 
 .error { color: var(--bad); font-size: 12px; }
+
+/* Setup checklist */
+ol.steps { list-style: none; padding: 0; margin: 0 0 12px; }
+.step { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.step:last-child { border-bottom: none; }
+.step-mark {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); font-weight: 600;
+}
+.step.done .step-mark { background: #1f3a2a; border-color: var(--good); color: var(--good); }
+.step.done .step-title { color: var(--muted); }
+.step.current .step-mark { border-color: var(--gold); color: var(--gold); }
+.step.current .step-title { color: var(--text); font-weight: 600; }
+.step-body { margin-top: 4px; }
+.step-body button, a.button { margin-right: 6px; }
+a.button {
+  display: inline-block; padding: 4px 10px; border-radius: 6px; text-decoration: none;
+  color: var(--text); background: #2c3a55; border: 1px solid #3b4f75;
+}
+a.button:hover { background: #34466a; }
 .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
 
 @media (max-width: 760px) {
