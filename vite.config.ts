@@ -7,4 +7,6 @@ export default defineConfig({
   base: './',
   build: { chunkSizeWarningLimit: 900 },
   server: { port: 5173, strictPort: true },
+  // Only this checkout's tests; .claude/worktrees holds other sessions' copies of the repo.
+  test: { exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'] },
 });
