@@ -25,6 +25,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run test:addon
       - run: npm run build
       - name: Package setup zip (addon + setup scripts)
         run: |

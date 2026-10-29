@@ -543,7 +543,9 @@ SlashCmdList.GOLDTRACKER = function(msg)
     if cmd == "window" then updateSessionFrame() end
     return
   elseif cmd == "bankalt" then
-    local name = raw:match("^%S+%s+(%S+)")
+    -- The whole rest of the line, so "Name-Realm" and names with spaces both work.
+    local name = raw:match("^%S+%s+(.-)%s*$")
+    if name == "" then name = nil end
     if not name then
       say("Bank alt: " .. (a.bankAlt or "not set") .. ". Set it with /gt bankalt Name")
     elseif name:lower() == "none" then
