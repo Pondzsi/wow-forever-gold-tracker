@@ -1,9 +1,10 @@
 ## Interface: 16001, 120100, 120105
 ## Title: Gold Tracker
 ## Notes: Records gold, items, professions, recipes, AH sales and fishing for the Forever Gold Tracker dashboard. Shows sell/vendor/send advice in tooltips. Its buttons act only when you click them.
-## Version: 0.3.0
+## Version: 0.4.0
 ## OptionalDeps: Auctionator
 ## SavedVariables: GoldTrackerDB
 
 GoldTracker.lua
 Advice.lua
+Window.lua

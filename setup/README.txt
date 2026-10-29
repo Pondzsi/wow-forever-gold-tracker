@@ -17,7 +17,7 @@ You need Windows, Chrome or Edge, and the Auctionator addon.
 5. Play. WoW saves the data when you log out or type /reload (or /gt sync).
    Switch to the dashboard tab and it updates by itself.
 
-In game, type /gt for the list of commands.
+In game, type /gt to open the Gold Tracker window, or /gt help for the list of commands.
 
 If setup says it has no permission, right-click setup.bat -> Run as administrator.
 Run setup.bat again to update the addon.

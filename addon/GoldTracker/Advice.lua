@@ -10,7 +10,8 @@
 -- click them; nothing sells or sends by itself. Every panel can be switched off.
 -- Settings live in GoldTrackerDB.advice. Loaded after GoldTracker.lua.
 
-local ADDON_NAME = ...
+local ADDON_NAME, ns = ...
+ns = ns or {}
 local PREFIX = "|cffffd100Gold Tracker:|r "
 local CALLER = "GoldTracker"
 
@@ -492,8 +493,40 @@ end
 local frame = CreateFrame("Frame")
 local handlers = {}
 
+-- Daily gold per character, for the window's Gold and Goals tabs: history[YYYY-MM-DD][charKey] = copper.
+local function today() return date("%Y-%m-%d") end
+local function recordGold()
+  local m = try(GetMoney)
+  if not m or secret(m) then return end
+  local h = cfg()
+  h.history = h.history or {}
+  local d = today()
+  h.history[d] = h.history[d] or {}
+  h.history[d][me()] = m
+  -- Keep 120 days.
+  local cutoff = date("%Y-%m-%d", time() - 120 * 86400)
+  for day in pairs(h.history) do if day < cutoff then h.history[day] = nil end end
+end
+
+-- Total gold of all characters at the end of `day` (latest known value per character up to that day).
+local function totalOn(day)
+  local h = cfg().history or {}
+  local latest = {}
+  for d, chars in pairs(h) do
+    if d <= day then
+      for key, g in pairs(chars) do
+        if not latest[key] or d > latest[key].d then latest[key] = { d = d, g = g } end
+      end
+    end
+  end
+  local sum, any = 0, false
+  for _, v in pairs(latest) do sum, any = sum + v.g, true end
+  return any and sum or nil
+end
+
 function handlers.PLAYER_LOGIN()
   cfg()
+  recordGold()
   hookTooltips()
   C_Timer.After(6, loginSummary)
   -- Add the Auctionator check to the health check that GoldTracker.lua runs 10 s after login.
@@ -519,6 +552,14 @@ handlers.MAIL_SHOW = function() C_Timer.After(0.5, showMailPanel) end
 handlers.MAIL_CLOSED = function() if mailPanel then mailPanel:Hide() end end
 -- New recipes may arrive while playing.
 handlers.TRADE_SKILL_LIST_UPDATE = function() reagentIndex = nil end
+handlers.PLAYER_MONEY = recordGold
+
+-- Shared with Window.lua (same addon namespace).
+ns.advice = {
+  say = say, try = try, money = money, me = me, cfg = cfg, decide = decide, scanBags = scanBags,
+  bankAltKey = bankAltKey, auctionatorReady = auctionatorReady, totalOn = totalOn, today = today,
+  COLOR = COLOR,
+}
 
 frame:SetScript("OnEvent", function(_, event, ...)
   local h = handlers[event]

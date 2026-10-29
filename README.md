@@ -47,7 +47,8 @@ startup entry. It keeps `Documents\ForeverGoldTracker` and your dashboard data.
 
 | Command | What it does |
 |---|---|
-| `/gt` | Shows the command list. `/goldtracker` works too. |
+| `/gt` | Opens the **Gold Tracker window** (see below). `/goldtracker` works too. |
+| `/gt help` | Shows the command list. |
 | `/gt start farming` | Starts a farming session. `/gt start` alone also starts farming. |
 | `/gt start fishing` | Starts a fishing session by hand. It does not stop by itself when idle. |
 | `/gt stop` | Ends the running session and saves it. |
@@ -58,6 +59,19 @@ startup entry. It keeps `Documents\ForeverGoldTracker` and your dashboard data.
 Fishing sessions also start by themselves on your first catch. They end after 15 minutes without a catch,
 or on a zone change. A `/reload` (or `/gt sync`) keeps a running session; logging out ends it.
 A session reaches the dashboard after it ends.
+
+## Gold Tracker window (addon 0.4.0)
+
+Type `/gt` in game. The window has four tabs; `/gt sell`, `/gt send`, `/gt gold` or `/gt goals` opens one directly.
+
+- **Sell:** every stack in your bags with what to do: sell on the AH, vendor, keep or check the AH, with values.
+- **Send:** what this character should mail to the bank alt, with the number of mails and the postage.
+- **Gold:** gold of all your characters, the total, and the change since yesterday and over 7 days.
+- **Goals:** savings goals with progress and an estimated date. `/gt goal 1000g Epic mount` adds one,
+  `/gt goal remove 1` removes one.
+
+Hover a row for the item tooltip. Drag the window to move it; Escape closes it. Gold history in the
+window starts with addon 0.4.0 (one value per character per day).
 
 ## In-game advice (addon 0.3.0)
 

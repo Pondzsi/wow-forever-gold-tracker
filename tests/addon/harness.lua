@@ -3,6 +3,8 @@ unpack = table.unpack
 table.maxn = function(t) local n = 0 for k in pairs(t) do if type(k) == "number" and k > n then n = k end end return n end
 
 OUT = {}
+date = os.date
+UISpecialFrames = {}
 function print(s) OUT[#OUT + 1] = tostring(s) end
 
 PLAYER = "Legally UnDead"
@@ -63,7 +65,7 @@ local function mock(name)
     if k == "SetText" then return function(self, s) self._text = s end end
     if k == "GetText" then return function(self) return self._text end end
     if k == "GetStringHeight" then return function() return 10 end end
-    if k == "CreateFontString" then return function() return mock("font") end end
+    if k == "CreateFontString" or k == "CreateTexture" then return function() return mock("region") end end
     if k == "GetPoint" then return function() return "TOP", nil, "TOP", 0, 0 end end
     if k == "IsShown" then return function(self) return self._shown end end
     if k == "Show" then return function(self) self._shown = true end end
@@ -95,8 +97,8 @@ SlashCmdList = { GOLDTRACKER = function(msg) BASE_CALLED = msg end }
 
 GoldTrackerDB = {
   chars = {
-    ["Legally UnDead-Ragnaros"] = { skills = { Skinning = { 150, 150 }, Leatherworking = { 120, 150 } } },
-    ["Legally Dead-Ragnaros"] = { skills = { Tailoring = { 150, 150 }, Enchanting = { 100, 150 } } },
+    ["Legally UnDead-Ragnaros"] = { gold = 150000, class = "ROGUE", skills = { Skinning = { 150, 150 }, Leatherworking = { 120, 150 } } },
+    ["Legally Dead-Ragnaros"] = { gold = 2500000, class = "MAGE", skills = { Tailoring = { 150, 150 }, Enchanting = { 100, 150 } } },
   },
   recipes = {
     ["Leatherworking:2300"] = { p = "Leatherworking", out = 2300, n = 1, r = { [2318] = 4 } },
