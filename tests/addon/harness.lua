@@ -3,6 +3,13 @@ unpack = table.unpack
 table.maxn = function(t) local n = 0 for k in pairs(t) do if type(k) == "number" and k > n then n = k end end return n end
 
 OUT = {}
+ERR_INV_FULL = "Inventory is full."
+NOW = 100
+function GetTime() NOW = NOW + 10 return NOW end
+function CursorHasItem() return CURSOR ~= nil end
+function ClearCursor() CURSOR = nil end
+DELETED = {}
+function DeleteCursorItem() DELETED[#DELETED + 1] = CURSOR BAG[CURSOR_SLOT] = {} CURSOR = nil end
 date = os.date
 UISpecialFrames = {}
 function print(s) OUT[#OUT + 1] = tostring(s) end
@@ -25,6 +32,8 @@ ITEMS = {
   [9999] = { "Cheap Herb", 1, 100, "", 0 },
   [1111] = { "Bound Belt", 2, 400, "INVTYPE_WAIST", 1 },
   [2222] = { "Green Sword", 2, 900, "INVTYPE_WEAPON", 2 },
+  [6948] = { "Hearthstone", 1, 0, "", 1 },
+  [21150] = { "Iron Bound Trunk", 1, 0, "", 0 },
 }
 local function linkOf(id) return "|cffffffff|Hitem:" .. id .. "::::|h[" .. ITEMS[id][1] .. "]|h|r" end
 C_Item = {
@@ -44,17 +53,18 @@ Auctionator = { API = { v1 = {
 -- Bag 0 contents: { id, count, bound }
 BAG = {
   { 2318, 20, false }, { 4306, 10, false }, { 2770, 30, false }, { 3300, 4, false },
-  { 9999, 5, false }, { 1111, 1, true }, { 2222, 1, false }, { 4338, 3, false },
+  { 9999, 5, false }, { 1111, 1, true }, { 2222, 1, false }, { 4338, 3, false }, { 6948, 1, true }, { 21150, 1, false },
 }
 USED = {}
 C_Container = {
   GetContainerNumSlots = function(bag) return bag == 0 and #BAG or 0 end,
   GetContainerItemInfo = function(bag, slot)
     local e = bag == 0 and BAG[slot]
-    if not e then return nil end
+    if not e or not e[1] then return nil end
     return { itemID = e[1], stackCount = e[2], hyperlink = linkOf(e[1]), isBound = e[3] }
   end,
   UseContainerItem = function(bag, slot) USED[#USED + 1] = BAG[slot][1] end,
+  PickupContainerItem = function(bag, slot) CURSOR, CURSOR_SLOT = BAG[slot][1], slot end,
 }
 
 -- Generic UI object: every method works and returns a usable value.

@@ -558,6 +558,7 @@ handlers.PLAYER_MONEY = recordGold
 ns.advice = {
   say = say, try = try, money = money, me = me, cfg = cfg, decide = decide, scanBags = scanBags,
   bankAltKey = bankAltKey, auctionatorReady = auctionatorReady, totalOn = totalOn, today = today,
+  ahPrice = ahPrice, itemFacts = itemFacts,
   COLOR = COLOR,
 }
 

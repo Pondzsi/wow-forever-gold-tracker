@@ -73,6 +73,17 @@ Type `/gt` in game. The window has four tabs; `/gt sell`, `/gt send`, `/gt gold`
 Hover a row for the item tooltip. Drag the window to move it; Escape closes it. Gold history in the
 window starts with addon 0.4.0 (one value per character per day).
 
+## Full bags helper (addon 0.5.0)
+
+When the game says "Inventory is full", a popup suggests the bag stack worth the least and offers **Delete**.
+
+- Value = vendor price or AH price after the AH cut, whichever is higher.
+- Only grey and white items are suggested. Never: gear above grey, the Hearthstone, profession tools, quest items,
+  materials for your own professions, or items with no known value (for example an unopened trunk).
+- **Never this** stops suggesting that item. **Not now** closes the popup. Nothing is deleted without your click.
+- `/gt worst` shows the current suggestion, `/gt fullbags off` switches the helper off, `/gt protect clear` resets
+  the "Never this" list.
+
 ## In-game advice (addon 0.3.0)
 
 With Auctionator loaded, the addon shows the dashboard's decisions in the game:

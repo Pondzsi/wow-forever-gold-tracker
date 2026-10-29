@@ -6,6 +6,7 @@ const { lua, lauxlib, lualib, to_luastring } = require('fengari');
 const ADDON = path.join(__dirname, '..', '..', 'addon', 'GoldTracker');
 const ADVICE = path.join(ADDON, 'Advice.lua');
 const WINDOW = path.join(ADDON, 'Window.lua');
+const FULLBAGS = path.join(ADDON, 'FullBags.lua');
 const L = lauxlib.luaL_newstate();
 lualib.luaL_openlibs(L);
 
@@ -23,7 +24,7 @@ run(fs.readFileSync(path.join(__dirname, 'harness.lua'), 'utf8'), 'harness');
 // Advice.lua starts with `local ADDON_NAME = ...`; run it as a chunk with an argument.
 // Each file gets the addon name and the shared namespace table, like in WoW.
 run('NS = {}', 'ns');
-for (const [file, label] of [[ADVICE, 'Advice.lua'], [WINDOW, 'Window.lua']]) {
+for (const [file, label] of [[ADVICE, 'Advice.lua'], [WINDOW, 'Window.lua'], [FULLBAGS, 'FullBags.lua']]) {
   run('local f = assert(load(' + JSON.stringify(fs.readFileSync(file, 'utf8')) + ', "' + label + '")) f("GoldTracker", NS)', 'load ' + label);
 }
 
@@ -115,6 +116,23 @@ run('SlashCmdList.GOLDTRACKER("goal remove 1")', 'rm');
 check('goal removed', get('#NS.advice.cfg().goals'), '0');
 run('BASE_CALLED = nil; SlashCmdList.GOLDTRACKER("stop")', 'stop');
 check('/gt stop still reaches GoldTracker.lua', get('BASE_CALLED'), 'stop');
+
+// ---------- Full bags helper ----------
+run('PLAYER = "Legally UnDead"', 'rogue');
+run('for _, f in ipairs(FRAMES) do if f._scripts.OnEvent then f._scripts.OnEvent(f, "UI_ERROR_MESSAGE", 3, ERR_INV_FULL) end end', 'full');
+run('for _, f in ipairs(FRAMES) do if f._name == "GoldTrackerFullBags" then FB = f end end', 'fb');
+check('popup shown on full bags', get('FB and FB._shown'), 'true');
+check('suggests the junk worth least (not Hearthstone, trunk, keep or gear)', get('FB.text._text'), /Rabbit's Foot.*x4/s);
+run('FB.delete._scripts.OnClick(FB.delete)', 'del');
+check('deletes exactly that stack', get('table.concat(DELETED, ",")'), '3300');
+run('SlashCmdList.GOLDTRACKER("worst")', 'worst');
+check('next worst after the Rabbit\'s Foot is the cheap herb', get('OUT[#OUT]'), /Cheap Herb\].*x5 \(500c\)/);
+run('for _, f in ipairs(FRAMES) do if f._scripts.OnEvent then f._scripts.OnEvent(f, "UI_ERROR_MESSAGE", 3, ERR_INV_FULL) end end', 'full2');
+run('FB.keep._scripts.OnClick(FB.keep)', 'never');
+run('SlashCmdList.GOLDTRACKER("worst")', 'worst2');
+check('"Never this" skips the item next time', get('OUT[#OUT]'), /Mageweave Cloth\].*x3 \(627c\)/);
+run('SlashCmdList.GOLDTRACKER("fullbags off")', 'off');
+check('full bags helper can be switched off', get('NS.advice.cfg().fullbags'), 'false');
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nall checks passed');
 process.exit(failed ? 1 : 0);
