@@ -1,7 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { decideHoldings, type Decision } from '../calc';
-import { db } from '../db';
+import { db, type InventoryRow, type Recipe } from '../db';
+import { auctionatorImportText, buildShoppingLists } from '../shopping';
+import { useToast } from '../toast';
 import { useSort } from '../sort';
 import { EmptyState, fmtAge, Money, Skeleton, useCharacters, useItems, usePriceMap, useSettings, CharacterSelect } from '../ui';
 import { ItemLink } from '../wowhead';
@@ -127,6 +129,62 @@ export function SellList() {
           crafted are kept. Disenchanting isn't compared yet.
         </p>
       </div>
+
+      <ShoppingListCard inventory={inventory ?? []} recipes={recipes} />
     </>
+  );
+}
+
+/** One Auctionator search for every item the dashboard has no (fresh) price for. */
+function ShoppingListCard({ inventory, recipes }: { inventory: InventoryRow[]; recipes: Recipe[] }) {
+  const items = useItems();
+  const prices = usePriceMap();
+  const settings = useSettings();
+  const toast = useToast();
+  const lists = buildShoppingLists(inventory, items.byId, prices, recipes, settings, settings.staleDays);
+  const text = auctionatorImportText(lists);
+  const count = lists.reduce((s, l) => s + l.items.length, 0);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ text: 'Copied. In game: Auctionator → Shopping → Import, paste, then Search.', tone: 'good' });
+    } catch {
+      toast({ text: 'Copy failed: select the text below and press Ctrl+C.', tone: 'warn' });
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3>Auctionator shopping list</h3>
+      {count === 0 ? (
+        <p className="muted" style={{ margin: 0 }}>
+          Nothing to search: every item you hold and every recipe item has a recent AH price.
+        </p>
+      ) : (
+        <>
+          <p style={{ marginTop: 0 }}>
+            {count} item(s) need an AH price:{' '}
+            {lists.map((l) => `${l.name} (${l.items.length})`).join(', ')}. One Auctionator search prices them all.
+          </p>
+          <div className="row">
+            <button onClick={() => void copy()}>Copy Auctionator shopping list</button>
+          </div>
+          <ol className="small muted" style={{ margin: 'var(--s3) 0 var(--s2)', paddingLeft: 'var(--s5)' }}>
+            <li>At the AH, open the Auctionator tab <b>Shopping</b> and click <b>Import</b>.</li>
+            <li>Paste the text and confirm. The lists appear with the names above.</li>
+            <li>Select a list and click <b>Search</b>. Then <code>/reload</code>: the prices sync here.</li>
+          </ol>
+          <textarea
+            readOnly
+            value={text}
+            rows={Math.min(4, lists.length + 1)}
+            style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+            onFocus={(e) => e.currentTarget.select()}
+            aria-label="Auctionator import text"
+          />
+        </>
+      )}
+    </div>
   );
 }

@@ -85,7 +85,7 @@ export function buildTodos(input: TodoInput): Todo[] {
       value: 'High',
       title: `${missingForRecipes.size} recipe item(s) have no AH price`,
       why: 'The craft-or-sell verdict needs a price for the product and every material.',
-      how: 'Search these in the AH with Auctionator, or run an Auctionator full scan. Prices then sync by themselves.',
+      how: 'Sell list → "Copy Auctionator shopping list". In game: Auctionator → Shopping → Import, then Search.',
       items: [...missingForRecipes].slice(0, TOP),
     });
   }
@@ -104,7 +104,7 @@ export function buildTodos(input: TodoInput): Todo[] {
       value: big ? 'High' : 'Medium',
       title: `${unpriced.length} sellable item(s) in your bags or bank have no AH price`,
       why: 'You can\'t tell whether to sell, vendor or keep them. Sorted by vendor value × count. Soulbound, quest and warbound items are left out.',
-      how: 'Search them in the AH with Auctionator. If nobody lists them, the AH has no price: vendor or keep them.',
+      how: 'Sell list → "Copy Auctionator shopping list", import it in Auctionator, then Search. Nobody lists an item? Vendor or keep it.',
       items: unpriced.slice(0, TOP).map((u) => `${name(u.id)} ×${u.count}`),
     });
   }
@@ -120,7 +120,7 @@ export function buildTodos(input: TodoInput): Todo[] {
       value: stale[0].value >= 50_000 ? 'Medium' : 'Low',
       title: `${stale.length} price(s) older than ${settings.staleDays} days on items you hold`,
       why: 'Old prices can point you to the wrong decision.',
-      how: 'Run an Auctionator full scan when you visit the AH.',
+      how: 'Sell list → "Copy Auctionator shopping list" (it includes old prices), or run an Auctionator full scan.',
       items: stale.slice(0, TOP).map((s) => `${name(s.id)} (${formatMoney(s.value)} held)`),
     });
   }

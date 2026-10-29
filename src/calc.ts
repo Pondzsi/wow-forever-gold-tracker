@@ -477,3 +477,56 @@ export function planBankAltMail(input: BankAltInput): SenderPlan[] {
   }
   return out;
 }
+
+// ---------- "Sell now": price clearly above its recent average ----------
+
+export interface PriceSpike {
+  itemId: number;
+  count: number;
+  latest: number; // copper per unit
+  average: number; // average of the 7 days before the latest price
+  changePercent: number;
+  heldValue: number; // count × latest
+}
+
+/**
+ * Held, AH-sellable items whose latest price is at least `minRise` above the average of the
+ * 7 days before it (at least 2 earlier prices). Old latest prices are ignored. Biggest value first.
+ */
+export function priceSpikes(
+  held: Map<number, number>,
+  items: Map<number, Item>,
+  allPrices: Price[],
+  staleDays: number,
+  minRise = 0.15,
+  now = Date.now(),
+): PriceSpike[] {
+  const byItem = new Map<number, Price[]>();
+  for (const p of allPrices) {
+    if (!held.has(p.itemId)) continue;
+    const list = byItem.get(p.itemId) ?? [];
+    list.push(p);
+    byItem.set(p.itemId, list);
+  }
+  const out: PriceSpike[] = [];
+  for (const [itemId, list] of byItem) {
+    if (!canSellOnAH(items.get(itemId))) continue;
+    list.sort((a, b) => a.time - b.time);
+    const last = list[list.length - 1];
+    if (isStale(last, staleDays, now)) continue;
+    const before = list.filter((p) => p.time < last.time && p.time >= last.time - 7 * 86_400_000);
+    if (before.length < 2) continue;
+    const average = before.reduce((s, p) => s + p.copper, 0) / before.length;
+    if (average <= 0 || last.copper < average * (1 + minRise)) continue;
+    const count = held.get(itemId)!;
+    out.push({
+      itemId,
+      count,
+      latest: last.copper,
+      average: Math.round(average),
+      changePercent: Math.round(((last.copper - average) / average) * 100),
+      heldValue: last.copper * count,
+    });
+  }
+  return out.sort((a, b) => b.heldValue - a.heldValue);
+}

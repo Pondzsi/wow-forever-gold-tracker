@@ -11,9 +11,11 @@ import {
 } from '../db';
 
 const versionLabel = GAME_VERSIONS.find((v) => v.id === gameVersion)?.label ?? gameVersion;
-import { useCharacters, useSettings } from '../ui';
+import { fmtAge, useCharacters, useSettings } from '../ui';
 import { BankAltSettings } from './BankAlt';
 import { useWowheadStatus } from '../wowhead';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { backupStatus, disableAutoBackup, enableAutoBackup, KEEP_BACKUPS } from '../sync/backup';
 
 export function SettingsPage() {
   const settings = useSettings();
@@ -146,7 +148,8 @@ export function SettingsPage() {
 
       <div className="card">
         <h3>Backup</h3>
-        <p className="muted" style={{ marginTop: 0 }}>
+        <AutoBackup />
+        <p className="muted">
           Your data is stored in this browser only. Clearing browser data deletes it. Download a backup regularly and keep
           it in a synced folder (OneDrive, Google Drive…). A backup holds the <b>{versionLabel}</b> data only.
         </p>
@@ -309,5 +312,60 @@ function CharacterRow({ character }: { character: Character }) {
         />
       </td>
     </tr>
+  );
+}
+
+/** Daily backup into Documents\ForeverGoldTracker\backups (needs write access, granted with a click). */
+function AutoBackup() {
+  const [tick, setTick] = useState(0);
+  const [note, setNote] = useState('');
+  const status = useLiveQuery(() => backupStatus(), [tick]);
+  if (!status) return null;
+  const on = status.enabled && status.permission === 'granted';
+
+  async function turnOn() {
+    try {
+      setNote((await enableAutoBackup()) ? 'Daily backup is on. The first backup is saved.' : 'Write access was not allowed.');
+    } catch (e) {
+      setNote((e as Error).message);
+    }
+    setTick((t) => t + 1);
+  }
+
+  return (
+    <div style={{ marginBottom: 'var(--s3)' }}>
+      <div className="row" style={{ alignItems: 'center' }}>
+        {on ? (
+          <>
+            <span className="good">✓ Daily backup is on</span>
+            <span className="small muted">
+              into <code>backups</code> in your game data folder · keeps the last {KEEP_BACKUPS}
+              {status.last ? ` · last ${fmtAge(status.last)}` : ''}
+            </span>
+            <button
+              className="secondary"
+              onClick={async () => {
+                await disableAutoBackup();
+                setTick((t) => t + 1);
+              }}
+            >
+              Turn off
+            </button>
+          </>
+        ) : (
+          <>
+            <button onClick={() => void turnOn()} disabled={status.permission === 'none'}>
+              {status.enabled ? 'Allow write access again' : 'Turn on daily backup'}
+            </button>
+            <span className="small muted">
+              {status.permission === 'none'
+                ? 'Connect the folder on Sync & to-do first.'
+                : `Saves a backup into Documents\ForeverGoldTracker\backups once a day, when the dashboard syncs. Keeps the last ${KEEP_BACKUPS}.`}
+            </span>
+          </>
+        )}
+      </div>
+      {note && <p className="hint">{note}</p>}
+    </div>
   );
 }

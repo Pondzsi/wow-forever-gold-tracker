@@ -39,6 +39,9 @@ startup entry. It keeps `Documents\ForeverGoldTracker` and your dashboard data.
   then switch to the dashboard tab.
 - **Sync & to-do** lists what still needs you, ranked High / Medium / Low.
 - **Send to bank alt** lists what your other characters should mail to the bank alt. Choose the bank alt there once.
+- **Sell list → Copy Auctionator shopping list:** every item without a (recent) AH price in one Auctionator
+  shopping list. In game: Auctionator → Shopping → Import, paste, then Search, then `/reload`.
+- **Overview → Sell now:** items you hold whose latest AH price is at least 15% above their 7-day average.
 
 ## Slash commands
 
@@ -84,7 +87,9 @@ window open), then `/reload`, to test again.
 
 - Data is saved in your browser (IndexedDB), one database per game version, for the site address you use.
 - Use the same browser and the same address, or you see an empty dashboard.
-- Clearing browser data deletes it. Use **Settings & backup → Download backup** regularly.
+- Clearing browser data deletes it. Turn on **Settings → Turn on daily backup**: the dashboard then saves a
+  backup into `DocumentsForeverGoldTrackerackups` once a day when it syncs, and keeps the last 14.
+  **Download backup** saves one by hand.
   A backup holds the game version you see at that time.
 - The dashboard only reads `GoldTracker.lua` and `Auctionator.lua`. It never writes to the game folder.
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ahNet,
   decideHoldings,
+  priceSpikes,
   evaluateRecipe,
   goldChangeSince,
   latestPrices,
@@ -316,5 +317,30 @@ describe('planBankAltMail', () => {
     expect(p.plan.mails).toBe(2);
     expect(p.plan.postage).toBe(60);
     expect(p.plan.value).toBe(ahNet(400, 10, fees) + ahNet(3000, 6, fees) + 60);
+  });
+});
+
+describe('priceSpikes', () => {
+  const DAY = 86_400_000;
+  const items = new Map<number, Item>([
+    [1, { id: 1, name: 'Silk Cloth' }],
+    [2, { id: 2, name: 'Flat Ore' }],
+    [3, { id: 3, name: 'Bound Thing', bound: true }],
+  ]);
+  const p = (itemId: number, copper: number, day: number): Price => ({ itemId, copper, time: day * DAY, source: 'import', note: '' });
+  const prices = [
+    p(1, 100, 1), p(1, 110, 3), p(1, 150, 5), // +43% vs 105
+    p(2, 100, 1), p(2, 100, 3), p(2, 105, 5), // +5%: no alert
+    p(3, 10, 1), p(3, 10, 3), p(3, 50, 5), // bound: never
+  ];
+  const held = new Map([[1, 20], [2, 10], [3, 1]]);
+
+  it('flags held items clearly above their 7-day average', () => {
+    const s = priceSpikes(held, items, prices, 3, 0.15, 5 * DAY);
+    expect(s.map((x) => [x.itemId, x.changePercent, x.heldValue])).toEqual([[1, 43, 3000]]);
+  });
+
+  it('ignores old latest prices', () => {
+    expect(priceSpikes(held, items, prices, 3, 0.15, 20 * DAY)).toEqual([]);
   });
 });

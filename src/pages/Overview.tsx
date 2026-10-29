@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { decideHoldings, goldAt, goldChangeSince, goldTimeline, sessionStats } from '../calc';
+import { decideHoldings, goldAt, goldChangeSince, goldTimeline, priceSpikes, sessionStats } from '../calc';
+import { ItemLink } from '../wowhead';
 import { db, sharedDb, type Character } from '../db';
 import { copperToGold, formatMoney, parseMoney } from '../money';
 import { folderPermission, requestFolderPermission, syncFromFolder } from '../sync/folder';
@@ -32,7 +33,7 @@ export function Overview() {
   const settings = useSettings();
   const todos = useTodos();
   const data = useLiveQuery(async () => {
-    const [snapshots, ledger, sessions, goals, inventory, recipes, lastSync, folder] = await Promise.all([
+    const [snapshots, ledger, sessions, goals, inventory, recipes, lastSync, folder, allPrices] = await Promise.all([
       db.goldSnapshots.toArray(),
       db.ledger.orderBy('time').reverse().limit(8).toArray(),
       db.sessions.orderBy('start').reverse().limit(3).toArray(),
@@ -41,13 +42,14 @@ export function Overview() {
       db.recipes.toArray(),
       db.meta.get('lastSync'),
       sharedDb.meta.get('wowFolder'),
+      db.prices.toArray(),
     ]);
     const sessionItems = await db.sessionItems.where('sessionId').anyOf(sessions.map((s) => s.id!)).toArray();
-    return { snapshots, ledger, sessions, sessionItems, goals, inventory, recipes, lastSync: lastSync?.value as number | undefined, connected: !!folder };
+    return { snapshots, ledger, sessions, sessionItems, goals, inventory, recipes, allPrices, lastSync: lastSync?.value as number | undefined, connected: !!folder };
   }, []);
 
   if (!data) return <h2>Overview</h2>;
-  const { snapshots, ledger, sessions, sessionItems, goals, inventory, recipes } = data;
+  const { snapshots, ledger, sessions, sessionItems, goals, inventory, recipes, allPrices } = data;
   const ids = characters.map((c) => c.id!);
   const now = Date.now();
   const startOfToday = new Date().setHours(0, 0, 0, 0);
@@ -60,6 +62,7 @@ export function Overview() {
   const toSell = decisions.filter((d) => d.decision === 'Sell on AH');
   const toVendor = decisions.filter((d) => d.decision === 'Vendor');
   const sum = (list: typeof decisions) => list.reduce((s, d) => s + d.best, 0);
+  const spikes = priceSpikes(held, items.byId, allPrices, settings.staleDays, 0.15, now).slice(0, 5);
 
   return (
     <>
@@ -98,6 +101,35 @@ export function Overview() {
         </a>
         {characters.length > 1 && <BankAltTile />}
       </div>
+
+      {spikes.length > 0 && (
+        <div className="card" style={{ marginTop: 'var(--s4)' }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <h3>Sell now: prices are up</h3>
+            <a href="#/prices" className="small">
+              Prices →
+            </a>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <tbody>
+                {spikes.map((s) => (
+                  <tr key={s.itemId}>
+                    <td>
+                      <ItemLink item={items.byId.get(s.itemId)} /> ×{s.count}
+                    </td>
+                    <td className="num good">+{s.changePercent}%</td>
+                    <td className="num small muted">
+                      <Money copper={s.latest} /> vs 7-day <Money copper={s.average} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="hint">Latest AH price at least 15% above its average of the 7 days before. Good moment to post.</p>
+        </div>
+      )}
 
       {todos.length > 0 && (
         <div className="card" style={{ marginTop: 'var(--s4)' }}>

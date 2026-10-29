@@ -30,6 +30,7 @@ import { SellList } from './pages/SellList';
 import { Sessions } from './pages/Sessions';
 import { SettingsPage } from './pages/Settings';
 import { describeResult, Sync } from './pages/Sync';
+import { backupIfDue } from './sync/backup';
 import { autoSync } from './sync/folder';
 import { ToastProvider, useToast } from './toast';
 import { useSettings } from './ui';
@@ -80,6 +81,9 @@ function useAutoSync() {
           const warned = !!r.addon?.warnings.length;
           toast({ text: `Synced: ${describeResult(r)}`, tone: warned ? 'warn' : 'good', ms: warned ? 10000 : 5000 });
         }
+        // Daily backup, when switched on in Settings (never asks for permission here).
+        const saved = await backupIfDue().catch(() => null);
+        if (saved) toast({ text: `Backup saved: backups\\${saved}`, tone: 'good' });
       } catch (e) {
         toast({ text: `Sync failed: ${(e as Error).message}`, tone: 'bad', ms: 10000 });
       } finally {
